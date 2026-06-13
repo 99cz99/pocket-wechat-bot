@@ -67,6 +67,10 @@ mkdir -p ~/cc-connect ~/.cc-connect ~/.claude/skills
 cp config/config.toml.template ~/.cc-connect/config.toml
 nano ~/.cc-connect/config.toml      # 填入 API Key 和微信凭据
 
+# 设置 API Key 环境变量（写入 bashrc 持久化）
+echo 'export ANTHROPIC_API_KEY=sk-你的key' >> ~/.bashrc
+source ~/.bashrc
+
 # 人格文件和系统提示词
 cp -r skills/nene ~/.claude/skills/
 cp CLAUDE.md ~/cc-connect/CLAUDE.md

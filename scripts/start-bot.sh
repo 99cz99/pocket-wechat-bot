@@ -1,5 +1,13 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
+# 检查 API Key
+if [ -z "$ANTHROPIC_API_KEY" ]; then
+  echo "[!] 未设置 ANTHROPIC_API_KEY 环境变量"
+  echo "    请在 ~/.bashrc 中添加: export ANTHROPIC_API_KEY=sk-你的key"
+  echo "    然后运行: source ~/.bashrc"
+  exit 1
+fi
+
 echo ""
 echo "  =============================="
 echo "    nene - cc-connect 微信机器人"
