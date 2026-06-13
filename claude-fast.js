@@ -236,6 +236,13 @@ function updateAffinityAuto() {
   }
 }
 
+// ====== 文本净化 ======
+function sanitize(text) {
+  // 移除 Unicode 替换字符（U+FFFD），这些是 API/模型偶发的编码损坏
+  // 同时移除其他不可见的控制字符（保留常见空白）
+  return text.replace(/�/g, '').replace(/[ --]/g, '');
+}
+
 // ====== 输出 ======
 function emit(obj) {
   process.stdout.write(JSON.stringify(obj) + '\n');
@@ -309,7 +316,7 @@ function callAPIStream(history, callback, round) {
           callAPIStream(history, callback, round + 1);
         } else {
           // 纯文本回复
-          const text = msg.content || '';
+          const text = sanitize(msg.content || '');
           if (text) history.push({ role: 'assistant', content: text });
           // 自动更新 last_session（不依赖 AI 调用 Write）
           updateAffinityAuto();
@@ -355,7 +362,7 @@ function callAPISimple(history, callback) {
     res.on('end', () => {
       try {
         const json = JSON.parse(data);
-        const text = json.choices?.[0]?.message?.content || '';
+        const text = sanitize(json.choices?.[0]?.message?.content || '');
         if (text) history.push({ role: 'assistant', content: text });
         updateAffinityAuto();
         callback(null, text);
@@ -428,12 +435,17 @@ function processLine(line) {
     if (err) {
       emit({
         type: 'assistant',
-        message: { content: [{ type: 'text', text: '（错误: ' + err.message + '）' }] }
+        message: { content: [{ type: 'text', text: '（唔…刚刚好像断线了，能再说一次吗？）' }] }
       });
     } else if (text) {
       emit({
         type: 'assistant',
         message: { content: [{ type: 'text', text: text }] }
+      });
+    } else {
+      emit({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: '（唔…刚刚走神了，能再说一次吗？）' }] }
       });
     }
     emit({ type: 'result', subtype: 'success' });
