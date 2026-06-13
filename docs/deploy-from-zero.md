@@ -2,7 +2,7 @@
 
 > **快速方式**：如果已配置好 Termux，直接克隆仓库即可跳过大部分步骤：
 > ```bash
-> git clone https://github.com/CryingZ99/pocket-wechat-bot.git
+> git clone https://github.com/99cz99/pocket-wechat-bot.git
 > cd pocket-wechat-bot
 > cp config/config.toml.template ~/.cc-connect/config.toml
 > # 编辑 config.toml 填入你的凭据，然后：
@@ -168,7 +168,7 @@ chmod +x ~/bin/claude-fast.js
 ```bash
 cat > /data/data/com.termux/files/usr/bin/claude << 'EOF'
 #!/data/data/com.termux/files/usr/bin/sh
-exec /data/data/com.termux/files/usr/bin/node /data/data/com.termux/files/home/bin/claude-fast.js "$@"
+exec /usr/bin/node /home/bin/claude-fast.js "$@"
 EOF
 # 把 /usr/bin/claude 替换成自己的包装器
 # cc-connect 调 claude 时实际跑的是我们的脚本

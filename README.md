@@ -53,7 +53,7 @@ chmod +x ~/bin/cc-connect
 
 ```bash
 cd ~
-git clone https://github.com/CryingZ99/pocket-wechat-bot.git
+git clone https://github.com/99cz99/pocket-wechat-bot.git
 cd pocket-wechat-bot
 ```
 
@@ -85,17 +85,15 @@ cp CLAUDE.md ~/cc-connect/CLAUDE.md
 cc-connect 通过调用 `/usr/bin/claude` 来启动 AI 进程：
 
 ```bash
-cat > ~/bin/claude << 'EOF'
+# 创建包装器（proot 内 /usr/bin/claude 即 Termux 真实 /usr/bin/claude）
+cat > /data/data/com.termux/files/usr/bin/claude << 'EOF'
 #!/data/data/com.termux/files/usr/bin/sh
-exec /data/data/com.termux/files/usr/bin/node /data/data/com.termux/files/home/bin/claude-fast.js "$@"
+exec /usr/bin/node /home/bin/claude-fast.js "$@"
 EOF
-chmod +x ~/bin/claude
+chmod +x /data/data/com.termux/files/usr/bin/claude
 
 # 安装 claude-fast.js
 cp claude-fast.js ~/bin/claude-fast.js
-
-# 让 /usr/bin/claude 指向这个包装器
-# （proot 内需要，start-bot.sh 已处理）
 ```
 
 ### 7. 启动并保持后台

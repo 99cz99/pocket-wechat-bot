@@ -548,7 +548,7 @@ chmod +x ~/bin/claude-fast.js</code></pre>
       <div class="method-content method-adb show">
 <pre><code>adb shell "run-as com.termux sh -c 'cat > /data/data/com.termux/files/usr/bin/claude << EOF
 #!/data/data/com.termux/files/usr/bin/sh
-exec /data/data/com.termux/files/usr/bin/node /data/data/com.termux/files/home/bin/claude-fast.js \"\\\$@\"
+exec /usr/bin/node /home/bin/claude-fast.js \"\\\$@\"
 EOF
 chmod +x /data/data/com.termux/files/usr/bin/claude'"</code></pre>
       </div>
