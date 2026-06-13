@@ -44,7 +44,7 @@ try {
         '<!-- SESSION_MEMORY_UPDATE_RULE -->',
         '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `.claude/skills/nene/references/affinity.json`。',
         '需要更新的字段：',
-        '- `last_session`: 改为今天日期 "2026-06-13"',
+        '- `last_session`: 改为今天的日期（格式 YYYY-MM-DD，如 "2026-06-13"）',
         '- `notes`: 用一两句话记录本轮对话中最值得记住的内容。如果对话很短或只是闲聊，写一句简短概括即可，不要留空。',
         '- `trust_value`: 如果信任有变化则更新数字，无变化则保持不变',
         '- `trust_level`: 如果跨越了层级边界则更新，否则保持不变',
@@ -53,7 +53,7 @@ try {
       ].join('\n');
       process.stderr.write('claude-fast: injected session memory (trust=' + aff.trust_value + ', Lv' + aff.trust_level + ')\n');
       process.stderr.write('claude-fast: affinity path=' + affPath + ' raw=' + JSON.stringify(aff) + '\n');
-      fs.appendFileSync(path.join(HOME, 'cc-connect', 'bot-debug.log'),
+      fs.appendFileSync(path.join(WORK_DIR, 'bot-debug.log'),
         new Date().toISOString() + ' injected: trust=' + aff.trust_value + ' Lv' + aff.trust_level + ' path=' + affPath + ' raw=' + JSON.stringify(aff) + '\n');
     } catch(e2) {
       process.stderr.write('claude-fast: failed to parse affinity.json: ' + e2.message + '\n');

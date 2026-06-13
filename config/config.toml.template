@@ -21,7 +21,7 @@ idle_timeout_mins = 120
     type = "claudecode"
 
     [projects.agent.options]
-      allowed_tools = ["Read", "Grep", "Glob", "Skill", "Write", "Edit"]
+      allowed_tools = ["Read", "Grep", "Glob", "Write", "Edit"]
       mode = "acceptEdits"
       quiet = true
       work_dir = "/data/data/com.termux/files/home/cc-connect"
