@@ -10,7 +10,7 @@
 1. 从消息中提取人格名 `<name>`
 2. 读取文件 `.claude/skills/<name>/SKILL.md`
 3. 如果文件不存在，回复「找不到 `<name>` 这个人格呢…可用的有：nene」
-4. 如果文件存在，读取本 CLAUDE.md，保留 `<!-- PERSONALITY -->` 之前的所有内容
+4. 如果文件存在，用 Read 读取 `cc-connect/CLAUDE.md`，保留 `<!-- PERSONALITY -->` 之前的所有内容
 5. 用 Write 重写 `cc-connect/CLAUDE.md` = 保留内容 + `<!-- PERSONALITY -->` + 换行 + SKILL.md 全文
 6. 回复「已切换至 <name> 模式~」
 

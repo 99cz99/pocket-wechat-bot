@@ -27,7 +27,7 @@ if [ -f "$LOCK" ]; then
       -b /apex/com.android.runtime:/apex/com.android.runtime \
       -b /dev:/dev \
       -b /proc:/proc \
-      /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin \
+      /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" PATH=/usr/bin:/usr/local/bin:/home/bin \
       $HOME/bin/cc-connect --config "$CONFIG" --force 2>/dev/null
     rm -f "$LOCK"
     sleep 1
@@ -44,7 +44,7 @@ proot \
   -b /apex/com.android.runtime:/apex/com.android.runtime \
   -b /dev:/dev \
   -b /proc:/proc \
-  /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin \
+  /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" PATH=/usr/bin:/usr/local/bin:/home/bin \
   $HOME/bin/cc-connect --config "$CONFIG" &
 
 sleep 2

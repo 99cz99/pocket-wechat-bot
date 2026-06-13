@@ -42,9 +42,13 @@ try {
       systemPrompt += mem;
       systemPrompt += [
         '<!-- SESSION_MEMORY_UPDATE_RULE -->',
-        '**重要**：对话中发生值得记住的事（信任值升降、重要话题、对方暴露的个人信息、约定），',
-        '请用 Write 工具更新 `affinity.json` 的 `notes`、`trust_value`、`trust_level`、`last_session` 字段。',
-        '`notes` 用一两句话记录本次最值得记住的事，供下次对话系统注入参考。',
+        '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `.claude/skills/nene/references/affinity.json`。',
+        '需要更新的字段：',
+        '- `last_session`: 改为今天日期 "2026-06-13"',
+        '- `notes`: 用一两句话记录本轮对话中最值得记住的内容。如果对话很短或只是闲聊，写一句简短概括即可，不要留空。',
+        '- `trust_value`: 如果信任有变化则更新数字，无变化则保持不变',
+        '- `trust_level`: 如果跨越了层级边界则更新，否则保持不变',
+        '如果你不理解这个规则或不知道如何操作，请说明。',
         ''
       ].join('\n');
       process.stderr.write('claude-fast: injected session memory (trust=' + aff.trust_value + ', Lv' + aff.trust_level + ')\n');
@@ -69,7 +73,7 @@ const TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          file_path: { type: 'string', description: '文件的绝对路径' },
+          file_path: { type: 'string', description: '文件路径，相对于 HOME 目录或绝对路径' },
           offset: { type: 'integer', description: '起始行号（可选）' },
           limit: { type: 'integer', description: '读取行数（可选）' }
         },
@@ -111,11 +115,11 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'Write',
-      description: '写入文件（会覆盖已有内容）。',
+      description: '写入文件（会覆盖已有内容）。路径可以是相对于 HOME 的路径或绝对路径。',
       parameters: {
         type: 'object',
         properties: {
-          file_path: { type: 'string', description: '要写入的文件的绝对路径' },
+          file_path: { type: 'string', description: '文件路径，相对于 HOME 目录（如 cc-connect/CLAUDE.md 或 .claude/skills/nene/references/affinity.json）' },
           content: { type: 'string', description: '要写入的内容' }
         },
         required: ['file_path', 'content']
@@ -166,8 +170,10 @@ function executeTool(name, args) {
       case 'Grep': {
         const searchPath = resolved || WORK_DIR;
         const pattern = args.pattern || '';
-        // 简单的 grep 替代：find + grep
-        const cmd = `grep -rn --include='*.md' --include='*.json' --include='*.js' --include='*.toml' -E "${pattern.replace(/"/g,'\\"')}" "${searchPath}" 2>/dev/null | head -30`;
+        // 安全转义：单引号包裹，内部单引号用 '\'' 转义
+        const escPattern = pattern.replace(/'/g, "'\\''");
+        const escPath = searchPath.replace(/'/g, "'\\''");
+        const cmd = `grep -rn --include='*.md' --include='*.json' --include='*.js' --include='*.toml' -E '${escPattern}' '${escPath}' 2>/dev/null | head -30`;
         try {
           return execSync(cmd, { encoding: 'utf-8', timeout: 5000, cwd: WORK_DIR }) || '无匹配结果';
         } catch (e) {
@@ -177,8 +183,9 @@ function executeTool(name, args) {
       case 'Glob': {
         const searchPath = resolved || WORK_DIR;
         const pattern = args.pattern || '**/*';
-        // 用 find 实现 glob
-        const cmd = `find "${searchPath}" -path "${searchPath}/${pattern}" -type f 2>/dev/null | head -20`;
+        const escPattern = pattern.replace(/'/g, "'\\''");
+        const escPath = searchPath.replace(/'/g, "'\\''");
+        const cmd = `find '${escPath}' -path '${escPath}/${escPattern}' -type f 2>/dev/null | head -20`;
         try {
           return execSync(cmd, { encoding: 'utf-8', timeout: 5000, cwd: WORK_DIR }) || '无匹配文件';
         } catch (e) {
@@ -189,6 +196,8 @@ function executeTool(name, args) {
         const dir = path.dirname(resolved);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(resolved, args.content || '', 'utf-8');
+        fs.appendFileSync(path.join(WORK_DIR, 'bot-debug.log'),
+          new Date().toISOString() + ' Write: ' + resolved + '\n');
         return '写入成功: ' + resolved + ' (' + (Buffer.byteLength(args.content||'')/1024).toFixed(1) + 'KB)';
       }
       case 'Edit': {
@@ -197,6 +206,8 @@ function executeTool(name, args) {
         if (!content.includes(args.old_string || '')) return '错误：old_string 未在文件中找到';
         const newContent = content.replace(args.old_string, args.new_string);
         fs.writeFileSync(resolved, newContent, 'utf-8');
+        fs.appendFileSync(path.join(WORK_DIR, 'bot-debug.log'),
+          new Date().toISOString() + ' Edit: ' + resolved + '\n');
         return '编辑成功: ' + resolved;
       }
       default:
@@ -204,6 +215,24 @@ function executeTool(name, args) {
     }
   } catch (e) {
     return '工具执行错误: ' + e.message;
+  }
+}
+
+// ====== 自动更新 affinity ======
+function updateAffinityAuto() {
+  const affPath = path.join(HOME, '.claude/skills/nene/references/affinity.json');
+  try {
+    let aff = { trust_level: 0, trust_value: 0, last_session: '', notes: '' };
+    if (fs.existsSync(affPath)) {
+      aff = JSON.parse(fs.readFileSync(affPath, 'utf-8'));
+    }
+    aff.last_session = new Date().toISOString().split('T')[0];
+    if (!aff.notes) aff.notes = '对话中';
+    fs.writeFileSync(affPath, JSON.stringify(aff, null, 2), 'utf-8');
+    fs.appendFileSync(path.join(WORK_DIR, 'bot-debug.log'),
+      new Date().toISOString() + ' autoUpdate: trust=' + aff.trust_value + ' Lv' + aff.trust_level + '\n');
+  } catch (e) {
+    process.stderr.write('claude-fast: autoUpdate affinity failed: ' + e.message + '\n');
   }
 }
 
@@ -282,6 +311,8 @@ function callAPIStream(history, callback, round) {
           // 纯文本回复
           const text = msg.content || '';
           if (text) history.push({ role: 'assistant', content: text });
+          // 自动更新 last_session（不依赖 AI 调用 Write）
+          updateAffinityAuto();
           callback(null, text);
         }
       } catch (e) {
@@ -326,6 +357,7 @@ function callAPISimple(history, callback) {
         const json = JSON.parse(data);
         const text = json.choices?.[0]?.message?.content || '';
         if (text) history.push({ role: 'assistant', content: text });
+        updateAffinityAuto();
         callback(null, text);
       } catch (e) {
         callback(null, '');
