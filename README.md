@@ -30,6 +30,8 @@
 
 ---
 
+> ⚠️ **部署方式**：本项目通过 `git clone` 部署，日常更新用 `git pull`。GitHub Release 仅做版本快照备份，不要从 Release 下载。
+
 ## 快速开始
 
 ### 1. 准备环境
