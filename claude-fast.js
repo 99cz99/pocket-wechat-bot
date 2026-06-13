@@ -12,7 +12,8 @@ const readline = require('readline');
 const API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.deepseek.com/v1';
 const MODEL = 'deepseek-v4-pro';
-const WORK_DIR = process.env.HOME + '/cc-connect';
+const HOME = process.env.HOME || '/data/data/com.termux/files/home';
+const WORK_DIR = HOME + '/cc-connect';
 const MAX_TOOL_ROUNDS = 5;
 
 // ====== 系统 prompt ======
@@ -22,7 +23,7 @@ try {
   process.stderr.write('claude-fast: loaded CLAUDE.md (' + (Buffer.byteLength(systemPrompt)/1024).toFixed(1) + 'KB)\n');
 
   // 注入会话记忆：让重启后的bot知道上次聊了什么
-  const affPath = path.join(WORK_DIR, '.claude/skills/nene/references/affinity.json');
+  const affPath = path.join(HOME, '.claude/skills/nene/references/affinity.json');
   if (fs.existsSync(affPath)) {
     try {
       const aff = JSON.parse(fs.readFileSync(affPath, 'utf-8'));
@@ -48,7 +49,7 @@ try {
       ].join('\n');
       process.stderr.write('claude-fast: injected session memory (trust=' + aff.trust_value + ', Lv' + aff.trust_level + ')\n');
       process.stderr.write('claude-fast: affinity path=' + affPath + ' raw=' + JSON.stringify(aff) + '\n');
-      fs.appendFileSync(path.join(process.env.HOME, 'cc-connect', 'bot-debug.log'),
+      fs.appendFileSync(path.join(HOME, 'cc-connect', 'bot-debug.log'),
         new Date().toISOString() + ' injected: trust=' + aff.trust_value + ' Lv' + aff.trust_level + ' path=' + affPath + ' raw=' + JSON.stringify(aff) + '\n');
     } catch(e2) {
       process.stderr.write('claude-fast: failed to parse affinity.json: ' + e2.message + '\n');
@@ -147,9 +148,8 @@ function executeTool(name, args) {
   try {
     const filePath = args.file_path || args.path || '';
     // 安全检查：限制在 HOME 目录内
-    const home = process.env.HOME || '/data/data/com.termux/files/home';
-    const resolved = path.resolve(filePath.startsWith(home) ? filePath : path.join(home, filePath));
-    if (!resolved.startsWith(home) && !resolved.startsWith('/data/data/com.termux/files/home')) {
+    const resolved = path.resolve(filePath.startsWith(HOME) ? filePath : path.join(HOME, filePath));
+    if (!resolved.startsWith(HOME) && !resolved.startsWith('/data/data/com.termux/files/home')) {
       return '错误：只允许访问 HOME 目录下的文件';
     }
 

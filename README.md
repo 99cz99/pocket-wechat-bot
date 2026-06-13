@@ -38,10 +38,18 @@
 
 ```bash
 pkg update && pkg upgrade
-pkg install proot nodejs-lts git openssl-tool
+pkg install proot nodejs git curl -y
 ```
 
-### 2. 克隆项目
+### 2. 下载 cc-connect
+
+```bash
+mkdir -p ~/bin
+curl -L "https://github.com/chenhg5/cc-connect/releases/latest/download/cc-connect-linux-arm64" -o ~/bin/cc-connect
+chmod +x ~/bin/cc-connect
+```
+
+### 3. 克隆项目
 
 ```bash
 cd ~
@@ -49,22 +57,63 @@ git clone https://github.com/CryingZ99/pocket-wechat-bot.git
 cd pocket-wechat-bot
 ```
 
-### 3. 配置并启动
+### 4. 配置
 
 ```bash
-# 复制配置模板
-mkdir -p ~/.cc-connect
+# 创建工作目录
+mkdir -p ~/cc-connect ~/.cc-connect ~/.claude/skills
+
+# 配置文件
 cp config/config.toml.template ~/.cc-connect/config.toml
-# 编辑 config.toml，填入你的 API Key 和微信 Bot 凭据
-nano ~/.cc-connect/config.toml
+nano ~/.cc-connect/config.toml      # 填入 API Key 和微信凭据
 
-# 复制人格文件到 Claude Code 位置
-mkdir -p ~/.claude/skills
+# 人格文件和系统提示词
 cp -r skills/nene ~/.claude/skills/
-
-# 启动
-bash scripts/start-bot.sh
+cp CLAUDE.md ~/cc-connect/CLAUDE.md
 ```
+
+### 5. 获取微信凭据
+
+```bash
+# 扫码获取 token 和 account_id
+~/bin/cc-connect weixin setup --project nene
+# 把输出的 token 和 account_id 填入 ~/.cc-connect/config.toml
+```
+
+### 6. 创建 claude 包装器
+
+cc-connect 通过调用 `/usr/bin/claude` 来启动 AI 进程：
+
+```bash
+cat > ~/bin/claude << 'EOF'
+#!/data/data/com.termux/files/usr/bin/sh
+exec /data/data/com.termux/files/usr/bin/node /data/data/com.termux/files/home/bin/claude-fast.js "$@"
+EOF
+chmod +x ~/bin/claude
+
+# 安装 claude-fast.js
+cp claude-fast.js ~/bin/claude-fast.js
+
+# 让 /usr/bin/claude 指向这个包装器
+# （proot 内需要，start-bot.sh 已处理）
+```
+
+### 7. 启动并保持后台
+
+```bash
+# 安装 tmux（终端复用器，关闭 Termux 进程不中断）
+pkg install tmux -y
+
+# 创建 tmux 会话并启动
+tmux new -s nene
+bash scripts/start-bot.sh
+
+# 看到 "cc-connect is running" 后
+# 按 Ctrl+B 然后 D → 断开 tmux，bot 继续跑
+# 重新连接：tmux attach -t nene
+```
+
+> ⚠️ **重要**：Android 系统可能杀 Termux 后台进程。需在手机设置中允许 Termux 后台运行，详见 [部署教程第 12 步](docs/deploy-from-zero.md#12-防止-android-杀掉-termux重要)
 
 详细教程见 [docs/deploy-from-zero.md](docs/deploy-from-zero.md)
 
