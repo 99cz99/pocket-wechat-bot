@@ -144,6 +144,7 @@ bash scripts/start-bot.sh
 
 | 文档 | 说明 |
 |------|------|
+| [usage.md](docs/usage.md) | 使用指南 · 命令与交互 |
 | [deploy-from-zero.md](docs/deploy-from-zero.md) | 从零部署完整教程 |
 | [deploy-guide.html](docs/deploy-guide.html) | 部署教程（精美 HTML 版） |
 | [nene-skill-intro.html](docs/nene-skill-intro.html) | 宁宁 Skill 角色介绍 |
