@@ -20,6 +20,10 @@ Thumbs.db
 *.swp
 *.swo
 
+# 手机专用脚本（含 API key，勿上传）
+scripts/*-phone.sh
+scripts/run-bot-wrapper.sh
+
 # IDE
 .vscode/
 .idea/
