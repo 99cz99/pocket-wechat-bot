@@ -362,6 +362,38 @@ Android 系统会主动杀后台进程省电。就算用了 tmux，Termux 本身
 
 > 💡 不同品牌手机的设置路径略有差异。华为/荣耀在「应用启动管理」、小米在「省电策略」、OPPO/一加在「耗电保护」、三星在「电池」→「后台使用限制」、vivo 在「后台高耗电」。
 
+## 13. PC 端管理配置（推荐）
+
+日常改配置不用在手机上戳 nano。PC 上改完，一行命令推送：
+
+### 步骤 1：PC 连接手机
+
+```bash
+# 确认 adb 已连接
+adb devices
+```
+
+### 步骤 2：PC 上编辑配置
+
+```bash
+# 在 VSCode/记事本编辑仓库里的 config.toml
+code config\config.toml
+```
+
+### 步骤 3：一键推送
+
+```bash
+# Windows 双击或运行
+scripts\push-config.bat
+```
+
+脚本会：
+1. 推送修改后的 config.toml 到手机
+2. 杀掉旧 bot 进程、清理锁文件
+3. 提示你在手机 Termux 里运行 `bash start-nene.sh` 重启
+
+---
+
 ## 完成
 
 发微信消息测试。第一条 5-30 秒，后续 3-10 秒。
@@ -380,4 +412,8 @@ Android 系统会主动杀后台进程省电。就算用了 tmux，Termux 本身
     └── config.toml          ← 配置文件
 
 /usr/bin/claude → node ~/bin/claude-fast.js   ← 包装器
+
+PC 端（仓库）：
+├── config/config.toml        ← 在 PC 上编辑
+├── scripts/push-config.bat   ← 一键推送到手机
 ```
