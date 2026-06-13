@@ -1,0 +1,25 @@
+# 运行时状态文件
+**/affinity.json
+
+# 用户配置
+config.toml
+**/config.toml
+
+# 日志
+*.log
+
+# cc-connect 运行时目录
+.cc-connect/
+
+# Node.js (如果有)
+node_modules/
+
+# OS 杂项
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/

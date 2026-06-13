@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cc-connect 微信机器人 · 部署教程</title>
+<style>
+  :root {
+    --bg: #0f0f14; --card: #1a1a24; --border: #2a2a3a; --text: #c8c8d4;
+    --heading: #e8e8f0; --accent: #7c6ff0; --code-bg: #14141e;
+    --inline-code: #e0b0ff; --step-num: #7c6ff0;
+    --warn-bg: #2a1a1a; --warn-border: #5a2a2a;
+    --tip-bg: #1a2a1a; --tip-border: #2a5a2a;
+    --info-bg: #1a1a2e; --info-border: #2a2a5a;
+    --adb-badge: #2a1a3a; --adb-border: #4a2a5a; --adb-text: #d08ff0;
+    --phone-badge: #1a2a1a; --phone-border: #2a5a2a; --phone-text: #8fcf8f;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Noto Sans SC", sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.75; padding: 0;
+  }
+  .hero {
+    background: linear-gradient(135deg, #1a1a30 0%, #1f1a30 50%, #1a1a28 100%);
+    border-bottom: 1px solid var(--border); padding: 60px 24px 48px; text-align: center;
+  }
+  .hero h1 { font-size: 2.2em; color: #fff; font-weight: 700; margin-bottom: 8px; }
+  .hero .subtitle { font-size: 1.05em; color: #9090b0; margin-bottom: 24px; }
+  .badge-row { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 0.82em; font-weight: 500; }
+  .badge-android { background: #1e3a1e; color: #6fcf6f; border: 1px solid #2a5a2a; }
+  .badge-termux { background: #1a2a3a; color: #6fb8f0; border: 1px solid #2a4a5a; }
+  .badge-deepseek { background: #2a1a3a; color: #c08ff0; border: 1px solid #4a2a5a; }
+  .badge-wechat { background: #1a2a1a; color: #8fcf6f; border: 1px solid #2a4a2a; }
+
+  .main { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+  .section { margin-bottom: 48px; }
+  .section-title {
+    font-size: 1.45em; color: var(--heading); font-weight: 700;
+    margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .step {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: 20px; overflow: hidden;
+  }
+  .step-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 22px; cursor: pointer; user-select: none;
+  }
+  .step-header:hover { background: #1e1e2a; }
+  .step-num {
+    width: 36px; height: 36px; background: var(--step-num); color: #fff;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.95em; flex-shrink: 0;
+  }
+  .step-num.phone { background: #5a7a3a; }
+  .step-title { font-size: 1.05em; font-weight: 600; color: var(--heading); flex: 1; }
+  .step-time { font-size: 0.78em; color: #707088; background: #1a1a26; padding: 2px 10px; border-radius: 10px; }
+  .step-body { padding: 0 22px 22px 72px; display: none; }
+  .step.open .step-body { display: block; }
+  .step-body p { margin-bottom: 12px; }
+
+  /* ====== Method tabs ====== */
+  .method-bar {
+    display: flex; gap: 0; margin: 14px 0; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border); width: fit-content;
+  }
+  .method-tab {
+    padding: 6px 20px; font-size: 0.82em; cursor: pointer; border: none;
+    background: #1a1a26; color: #707088; font-family: inherit; transition: .2s;
+  }
+  .method-tab.active-adb { background: var(--adb-badge); color: var(--adb-text); }
+  .method-tab.active-phone { background: var(--phone-badge); color: var(--phone-text); }
+  .method-content { display: none; }
+  .method-content.show { display: block; }
+
+  /* ====== Code ====== */
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    font-size: 0.88em; line-height: 1.65; margin: 10px 0 16px; position: relative;
+  }
+  pre code { color: #c8c8e0; font-family: "Cascadia Code", "JetBrains Mono", "Fira Code", monospace; }
+  code {
+    font-family: "Cascadia Code", "JetBrains Mono", "Fira Code", monospace;
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 0.9em; color: var(--inline-code);
+  }
+  .lang-label {
+    position: absolute; top: 8px; right: 14px;
+    font-size: 0.7em; color: #606080; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .copy-btn {
+    position: absolute; top: 8px; right: 60px;
+    font-size: 0.7em; color: #7070a0; background: none;
+    border: 1px solid #3a3a5a; padding: 2px 10px; border-radius: 4px;
+    cursor: pointer; opacity: 0; transition: opacity .2s;
+  }
+  pre:hover .copy-btn { opacity: 1; }
+  .copy-btn:hover { background: #2a2a40; color: #c0c0ff; }
+
+  .alert {
+    border-radius: 8px; padding: 14px 18px; margin: 10px 0 16px;
+    font-size: 0.92em; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .alert-warn { background: var(--warn-bg); border: 1px solid var(--warn-border); color: #e0a0a0; }
+  .alert-tip { background: var(--tip-bg); border: 1px solid var(--tip-border); color: #a0d0a0; }
+  .alert-info { background: var(--info-bg); border: 1px solid var(--info-border); color: #a0b0e0; }
+  .alert-icon { font-size: 1.1em; flex-shrink: 0; }
+
+  .arch-diagram {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 28px; margin: 16px 0 24px; text-align: center;
+  }
+  .arch-row { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
+  .arch-box {
+    background: #1e1e2e; border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 18px; font-size: 0.9em;
+    font-weight: 600; color: var(--heading); white-space: nowrap;
+  }
+  .arch-box.api { border-color: #4a3a6a; color: #c0a0f0; }
+  .arch-box.bridge { border-color: #3a5a3a; color: #8fcf8f; }
+  .arch-box.ai { border-color: #5a4a3a; color: #f0c080; }
+  .arch-box.wechat { border-color: #3a5a3a; color: #7fcf7f; }
+  .arch-arrow { color: #505070; font-size: 1.2em; font-weight: 700; }
+
+  .btn-all {
+    display: block; width: fit-content; margin: 0 auto 40px;
+    padding: 8px 24px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 0.88em; cursor: pointer; font-family: inherit;
+  }
+  .btn-all:hover { background: #252535; color: #fff; }
+
+  .final-tree {
+    background: var(--code-bg); border: 1px solid #3a4a3a;
+    border-radius: 10px; padding: 24px; margin-top: 16px;
+    font-family: "Cascadia Code", "JetBrains Mono", monospace; font-size: 0.88em; line-height: 1.8;
+  }
+  .final-tree .dir { color: #7c8fcf; }
+  .final-tree .file { color: #c8c8d4; }
+  .final-tree .comment { color: #5a5a78; }
+
+  .flow-tag {
+    padding: 2px 10px; border-radius: 4px; font-size: 0.78em; font-weight: 600;
+  }
+  .flow-tag.adb { background: var(--adb-badge); color: var(--adb-text); }
+  .flow-tag.phone { background: var(--phone-badge); color: var(--phone-text); }
+
+  /* ====== Global mode ====== */
+  body.adb-mode .method-content.method-adb { display: block !important; }
+  body.adb-mode .method-content.method-phone { display: none !important; }
+  body.phone-mode .method-content.method-phone { display: block !important; }
+  body.phone-mode .method-content.method-adb { display: none !important; }
+  body.adb-mode .method-bar, body.phone-mode .method-bar { display: none; }
+
+  /* ====== Selection cards ====== */
+  .select-card {
+    flex: 1; min-width: 240px; border-radius: 10px; padding: 20px;
+    cursor: pointer; transition: all .2s; position: relative;
+  }
+  .select-card-adb { background: #1a1a2e; border: 2px solid #2a2a4a; }
+  .select-card-phone { background: #121a12; border: 2px solid #1a3a1a; }
+  .select-card:hover { transform: translateY(-2px); }
+  .select-card.selected-adb { border-color: var(--adb-text); box-shadow: 0 0 20px rgba(208,143,240,0.15); }
+  .select-card.selected-phone { border-color: var(--phone-text); box-shadow: 0 0 20px rgba(143,207,111,0.15); }
+  .select-card .check { display: none; position: absolute; top: 12px; right: 16px; font-size: 1.2em; }
+  .select-card.selected-adb .check, .select-card.selected-phone .check { display: block; }
+  .select-card.selected-adb .check { color: var(--adb-text); }
+  .select-card.selected-phone .check { color: var(--phone-text); }
+
+  @media (max-width: 640px) {
+    .hero { padding: 36px 16px 32px; }
+    .hero h1 { font-size: 1.5em; }
+    .main { padding: 24px 14px 60px; }
+    .step-body { padding: 0 14px 18px 14px; }
+    .step-header { padding: 14px 16px; }
+    pre { font-size: 0.78em; padding: 12px 14px; }
+    .method-bar { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>🤖 cc-connect 微信机器人</h1>
+  <p class="subtitle">Android 手机端部署指南 · 两种方式任选</p>
+  <div class="badge-row">
+    <span class="badge badge-android">📱 Android</span>
+    <span class="badge badge-termux">💻 Termux</span>
+    <span class="badge badge-deepseek">🧠 DeepSeek</span>
+    <span class="badge badge-wechat">💬 微信</span>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ====== 方式选择 ====== -->
+<div class="section" id="method-select">
+  <div class="section-title"><span class="icon">🔀</span> 选你的部署方式（点击卡片）</div>
+
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <div class="select-card select-card-adb" id="card-adb" onclick="selectGlobalMethod('adb')">
+      <span class="check">✅</span>
+      <h4 style="color:var(--adb-text);margin-bottom:8px">🖥️ PC + ADB（推荐）</h4>
+      <p style="color:#9090b0;font-size:0.85em">电脑通过 USB 线远程操作手机。<br>全程在电脑终端敲命令，文件在电脑上写好再推到手机。</p>
+      <p style="color:#a0d0a0;font-size:0.82em;margin-top:8px">✅ 适合：有电脑、不想在手机上打字</p>
+    </div>
+    <div class="select-card select-card-phone" id="card-phone" onclick="selectGlobalMethod('phone')">
+      <span class="check">✅</span>
+      <h4 style="color:var(--phone-text);margin-bottom:8px">📱 纯手机操作</h4>
+      <p style="color:#9090b0;font-size:0.85em">所有命令在 Termux 终端里手打。<br>用 nano 编辑器创建文件，复制粘贴代码。</p>
+      <p style="color:#a0d0a0;font-size:0.82em;margin-top:8px">✅ 适合：没电脑、不想折腾 ADB</p>
+    </div>
+  </div>
+  <p id="method-hint" style="margin-top:14px;color:#707088;font-size:0.85em;text-align:center">👆 点击选择一种方式，教程将只显示对应的命令</p>
+
+  <div class="alert alert-tip" style="margin-top:14px">
+    <span class="alert-icon">🤖</span>
+    <div><strong>懒人模式：</strong>选好方案后，直接把这份 HTML 文件丢给 Claude Code（或任何能执行命令的 AI），说「照着教程帮我部署」。AI 会自己读 HTML、提取命令、一步步执行。你只需要在扫码那步掏出手机。</div>
+  </div>
+</div>
+
+<!-- ====== 架构概览 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">🏗️</span> 架构概览</div>
+  <div class="arch-diagram">
+    <div class="arch-row">
+      <div class="arch-box wechat">💬 微信消息</div><span class="arch-arrow">→</span>
+      <div class="arch-box bridge">🔄 cc-connect<br><small>消息桥接</small></div><span class="arch-arrow">→</span>
+      <div class="arch-box ai">🧠 claude-fast.js<br><small>AI 脚本</small></div><span class="arch-arrow">→</span>
+      <div class="arch-box api">☁️ DeepSeek API</div>
+    </div>
+    <p style="margin-top:20px;color:#707088;font-size:0.85em">微信消息 → cc-connect 接收 → 转发给 claude-fast.js → 调用 AI → 返回回复 → cc-connect 发回微信</p>
+  </div>
+  <p>整个系统运行在一台 <strong>Android 手机</strong>上，只需要安装 <strong>Termux</strong>。不需要 root，不需要服务器。</p>
+</div>
+
+<!-- ====== 前置准备 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">📦</span> 前置准备</div>
+
+  <div class="alert alert-tip">
+    <span class="alert-icon">✅</span>
+    <div><strong>你需要准备：</strong>
+      <br>① 一台 Android 手机（Android 7+）
+      <br>② 一个 <a href="https://platform.deepseek.com/" style="color:#a0d0a0">DeepSeek API Key</a>（注册即送额度）
+      <br>③ 一个微信小号（用来登录机器人）
+      <br>④ [ADB 方式] 电脑 + USB 数据线
+      <br>⑤ [ADB 方式] 电脑上装好 ADB（<code>adb --version</code> 能跑）
+    </div>
+  </div>
+
+  <div class="alert alert-warn">
+    <span class="alert-icon">⚠️</span>
+    <div>微信机器人属于非官方使用方式，建议用<strong>小号</strong>运行。</div>
+  </div>
+</div>
+
+<button class="btn-all" onclick="document.querySelectorAll('.step').forEach(s=>s.classList.toggle('open'))">📂 展开 / 折叠全部步骤</button>
+
+<!-- ====== 方法切换函数 ====== -->
+<script>
+// 全局模式选择
+function selectGlobalMethod(method) {
+  // 设置 body class（不覆盖已有 class）
+  document.body.classList.remove('adb-mode', 'phone-mode');
+  document.body.classList.add(method + '-mode');
+
+  // 更新卡片样式
+  document.querySelectorAll('.select-card').forEach(c => {
+    c.classList.remove('selected-adb', 'selected-phone');
+  });
+  document.getElementById('card-' + method).classList.add('selected-' + method);
+
+  // 更新提示文字
+  var hint = document.getElementById('method-hint');
+  hint.textContent = '✅ 已选择 ' + (method === 'adb' ? 'PC + ADB' : '纯手机') + ' 方案，下方仅显示对应命令。切换方案点另一张卡片。';
+  hint.style.color = '#a0d0a0';
+}
+
+// 单步切换（未选择全局方案时使用）
+function switchMethod(block, method) {
+  var body = block.closest('.step-body');
+  body.querySelectorAll('.method-content').forEach(function(c) { c.classList.remove('show'); });
+  body.querySelectorAll('.method-content.method-' + method).forEach(function(c) { c.classList.add('show'); });
+  body.querySelectorAll('.method-tab').forEach(function(t) { t.className = 'method-tab'; });
+  body.querySelectorAll('.method-tab-' + method).forEach(function(t) { t.className = 'method-tab active-' + method; });
+}
+</script>
+
+<!-- ====== STEP 1 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">1.</span> 安装 Termux</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">1</span><span class="step-title">下载并安装 Termux</span><span class="step-time">⏱ 2 分钟</span>
+    </div>
+    <div class="step-body">
+      <p>📥 <a href="https://f-droid.org/packages/com.termux/" style="color:#a0a0f0">F-Droid 下载 Termux</a> → 安装 APK。</p>
+      <div class="alert alert-warn"><span class="alert-icon">⚠️</span><div>必须用 F-Droid 版！Google Play 版已停更，API 不兼容。</div></div>
+      <p>安装 Termux:API 附加包：F-Droid 搜「Termux:API」→ 安装（提供 <code>termux-wake-lock</code> 防杀后台）。</p>
+
+      <!-- ADB 方式额外 -->
+      <div class="method-bar" style="margin-top:16px">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式 — 还需开启 USB 调试</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 纯手机 — 跳过</button>
+      </div>
+      <div class="method-content method-adb show">
+        <p>设置 → 关于手机 → 连续点「版本号」7 次 → 返回 → 开发者选项 → 开启「USB 调试」。</p>
+        <p>USB 线连电脑，手机弹授权框 → 勾「始终允许」→ 确定。</p>
+        <p>电脑终端验证：</p>
+<pre><code>adb devices
+# 应显示: XXXXXXX  device</code></pre>
+      </div>
+      <div class="method-content method-phone">
+        <p>打开 Termux，看到黑色终端界面即可。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEP 2 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">2.</span> 安装依赖包</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">2</span><span class="step-title">pkg 安装 Node.js、proot、termux-api 等</span><span class="step-time">⏱ 5 分钟</span>
+    </div>
+    <div class="step-body">
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
+      </div>
+      <div class="method-content method-adb show">
+<pre><code>adb shell "run-as com.termux sh -c 'pkg update && pkg upgrade -y'"
+adb shell "run-as com.termux sh -c 'pkg install nodejs git curl proot tmux termux-api -y'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>pkg update && pkg upgrade -y
+pkg install nodejs git curl proot tmux termux-api -y</code></pre>
+      </div>
+
+      <div class="alert alert-tip"><span class="alert-icon">💡</span><div>
+        <strong>各包作用：</strong><br>
+        <code>nodejs</code> — 运行 AI 脚本 &nbsp; <code>curl</code> — 下载文件 &nbsp; <code>proot</code> — Linux 环境隔离<br>
+        <code>tmux</code> — 后台常驻 &nbsp; <code>termux-api</code> — 防杀后台（必须）
+      </div></div>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 验证</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端验证</button>
+      </div>
+      <div class="method-content method-adb show">
+<pre><code>adb shell "run-as com.termux sh -c 'node --version && git --version'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>node --version    # 应显示 v20.x 或更高
+git --version     # 应显示 git version 2.x</code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEP 3 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">3.</span> 下载 cc-connect</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">3</span><span class="step-title">获取 cc-connect 二进制文件</span><span class="step-time">⏱ 2 分钟</span>
+    </div>
+    <div class="step-body">
+      <p>cc-connect 是独立的 Go 消息桥。<strong>它不依赖 Claude Code</strong>——配置成 <code>claudecode</code> agent 类型时，它会调用 <code>/usr/bin/claude</code>，这个文件我们后面自己创建。</p>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
+      </div>
+      <div class="method-content method-adb show">
+<pre><code>adb shell "run-as com.termux sh -c 'mkdir -p /data/data/com.termux/files/home/bin && curl -L \"https://github.com/chenhg5/cc-connect/releases/latest/download/cc-connect-linux-arm64\" -o /data/data/com.termux/files/home/bin/cc-connect && chmod +x /data/data/com.termux/files/home/bin/cc-connect'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>mkdir -p ~/bin
+curl -L "https://github.com/chenhg5/cc-connect/releases/latest/download/cc-connect-linux-arm64" -o ~/bin/cc-connect
+chmod +x ~/bin/cc-connect</code></pre>
+      </div>
+
+      <div class="alert alert-tip"><span class="alert-icon">💡</span><div>如果 GitHub 下载慢，可以电脑下载后 <code>adb push</code> 传到手机。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEP 4 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">4.</span> 获取微信 Token <span class="flow-tag phone">📱 必须在手机上</span></div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num phone">4</span><span class="step-title">扫码登录微信，获取 token 和 account_id</span><span class="step-time">⏱ 2 分钟</span>
+    </div>
+    <div class="step-body">
+      <p>这一步<strong>必须在手机 Termux 里操作</strong>（要显示二维码）。打开 Termux：</p>
+<pre><code>~/bin/cc-connect weixin setup --project nene</code></pre>
+      <p>用<strong>机器人专用的微信号</strong>扫终端里的二维码。成功后打印：</p>
+<pre><code>token: wx_xxxxxxxxxxxxxxx
+account_id: xxxxxxxxxxxxx@im.wechat</code></pre>
+      <div class="alert alert-warn"><span class="alert-icon">📝</span><div>记下 <code>token</code> 和 <code>account_id</code>，配置要用。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEPS 5-9 共享模式：创建文件 ====== -->
+<!-- 以下步骤 5-9 都遵循同样模式：电脑写文件 → push / 手机 nano 编辑 -->
+
+<!-- ====== STEP 5 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">5.</span> 创建 AI 桥接脚本</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">5</span><span class="step-title">编写 claude-fast.js — stdin→API→stdout</span><span class="step-time">⏱ 3 分钟</span>
+    </div>
+    <div class="step-body">
+      <p>这是整个机器人的<strong>核心</strong>——从 stdin 读用户消息 → 调 DeepSeek API → 回复写到 stdout。</p>
+
+      <!-- 代码内容两种方式共用，只展示一次 -->
+      <p>将下面完整代码保存为文件，<strong>只改一处：</strong><code>API_KEY</code> 换成你的 DeepSeek Key。</p>
+<pre><code><span class="lang-label">javascript</span>#!/data/data/com.termux/files/usr/bin/node
+// claude-fast — cc-connect AI 桥接脚本
+const https = require('https');
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const readline = require('readline');
+
+const API_KEY = 'sk-你的DeepSeekKey';   // ← 改这里
+const BASE_URL = 'https://api.deepseek.com/v1';
+const MODEL = 'deepseek-v4-pro';
+const WORK_DIR = process.env.HOME + '/cc-connect';
+
+let systemPrompt = '';
+try {
+  systemPrompt = fs.readFileSync(path.join(WORK_DIR, 'CLAUDE.md'), 'utf-8');
+} catch (e) {
+  systemPrompt = '用简体中文回复，简洁直接。';
+}
+
+const conversation = [{ role: 'system', content: systemPrompt }];
+
+function emit(obj) { process.stdout.write(JSON.stringify(obj) + '\n'); }
+
+function extractUserText(line) {
+  let obj;
+  try { obj = JSON.parse(line); } catch (_) { return line.trim(); }
+  if (obj.type === 'user' && obj.message?.content) {
+    const c = obj.message.content;
+    if (typeof c === 'string') return c.trim();
+    if (Array.isArray(c)) return c.filter(x => x.type === 'text').map(x => x.text).join('\n').trim();
+  }
+  if (obj.type === 'system') return '';
+  return '';
+}
+
+function callAPI(userMsg, callback) {
+  if (!userMsg) { callback(null, ''); return; }
+  const url = new URL(BASE_URL + '/chat/completions');
+  const transport = url.protocol === 'https:' ? https : http;
+  conversation.push({ role: 'user', content: userMsg });
+  const body = JSON.stringify({
+    model: MODEL, messages: conversation,
+    stream: false, max_tokens: 2048, temperature: 0.8
+  });
+  const req = transport.request({
+    hostname: url.hostname, port: url.port || (url.protocol === 'https:' ? 443 : 80),
+    path: url.pathname, method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + API_KEY,
+      'Content-Length': Buffer.byteLength(body)
+    },
+    timeout: 120000
+  }, (res) => {
+    let data = '';
+    res.on('data', chunk => data += chunk);
+    res.on('end', () => {
+      try {
+        const json = JSON.parse(data);
+        const text = json.choices?.[0]?.message?.content || '';
+        if (text) { conversation.push({ role: 'assistant', content: text }); }
+        else { conversation.pop(); }
+        while (conversation.length > 29) conversation.splice(1, 2);
+        callback(null, text);
+      } catch (e) { conversation.pop(); callback(null, ''); }
+    });
+  });
+  req.on('error', (e) => { conversation.pop(); callback(e); });
+  req.on('timeout', () => { req.destroy(); callback(new Error('timeout')); });
+  req.write(body); req.end();
+}
+
+const rl = readline.createInterface({ input: process.stdin });
+rl.on('line', (line) => {
+  const msg = extractUserText(line.trim());
+  if (!msg) return;
+  callAPI(msg, (err, text) => {
+    if (err) {
+      emit({ type: 'assistant', message: { content: [{ type: 'text', text: '错误: ' + err.message }] } });
+    } else if (text) {
+      emit({ type: 'assistant', message: { content: [{ type: 'text', text: text }] } });
+    }
+    emit({ type: 'result', subtype: 'success' });
+  });
+});</code></pre>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式 — 电脑保存后推送</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端 — nano 编辑</button>
+      </div>
+      <div class="method-content method-adb show">
+        <p>电脑上保存为 <code>claude-fast.js</code>，然后推送：</p>
+<pre><code>adb push claude-fast.js //sdcard//Download//claude-fast.js
+adb shell "cat /sdcard/Download/claude-fast.js | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/bin/claude-fast.js && chmod +x /data/data/com.termux/files/home/bin/claude-fast.js'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+        <p>Termux 里执行：</p>
+<pre><code>nano ~/bin/claude-fast.js    # 打开编辑器，贴入代码，Ctrl+X 保存
+chmod +x ~/bin/claude-fast.js</code></pre>
+      </div>
+
+      <div class="alert alert-tip"><span class="alert-icon">🔧</span><div>后续更新代码：ADB 方式重新 push 即可；手机方式重新 nano 编辑。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEP 6 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">6.</span> 创建 claude 包装器</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">6</span><span class="step-title">让 cc-connect 找到我们的 AI 脚本</span><span class="step-time">⏱ 1 分钟</span>
+    </div>
+    <div class="step-body">
+      <p>cc-connect 通过执行 <code>/usr/bin/claude</code> 来调用 AI。<strong>不需要装 Claude Code</strong>——我们只是借用这个路径。</p>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
+      </div>
+      <div class="method-content method-adb show">
+<pre><code>adb shell "run-as com.termux sh -c 'cat > /data/data/com.termux/files/usr/bin/claude << EOF
+#!/data/data/com.termux/files/usr/bin/sh
+exec /data/data/com.termux/files/usr/bin/node /data/data/com.termux/files/home/bin/claude-fast.js \"\\\$@\"
+EOF
+chmod +x /data/data/com.termux/files/usr/bin/claude'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>cat > /data/data/com.termux/files/usr/bin/claude << 'EOF'
+#!/data/data/com.termux/files/usr/bin/sh
+exec /data/data/com.termux/files/usr/bin/node /data/data/com.termux/files/home/bin/claude-fast.js "$@"
+EOF
+chmod +x /data/data/com.termux/files/usr/bin/claude</code></pre>
+      </div>
+
+      <div class="alert alert-tip"><span class="alert-icon">🔗</span><div>链路：cc-connect → fork <code>/usr/bin/claude</code> → 包装器 → <code>node claude-fast.js</code> → DeepSeek API。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEP 7 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">7.</span> 创建人设文件</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">7</span><span class="step-title">编写 CLAUDE.md — 机器人的灵魂</span><span class="step-time">⏱ 2 分钟</span>
+    </div>
+    <div class="step-body">
+      <p><code>CLAUDE.md</code> 是系统提示词，定义机器人的性格和回复风格。</p>
+
+      <div class="alert alert-warn"><span class="alert-icon">⚠️</span><div><strong>下面只是作者用的示例</strong>（绫地宁宁角色），你应该换成自己的设定——客服、助手、角色扮演……格式不限。</div></div>
+
+      <p>参照以下格式写你自己的 CLAUDE.md：</p>
+<pre><code><span class="lang-label">markdown</span># 微信机器人规则
+
+## 底线：回复中绝对不要出现
+- 思考和推理过程
+- 工具调用信息
+- 工作目录路径
+
+## 要求
+- 直接给结果，像普通聊天一样回复
+- 始终用简体中文
+- 简洁，不废话
+
+---
+
+# 你的机器人人格
+
+## 身份
+在这里写机器人的人设...
+
+## 回复规则
+- 用「我」来回复
+- ...</code></pre>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式 — 电脑保存后推送</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端 — nano 编辑</button>
+      </div>
+      <div class="method-content method-adb show">
+        <p>电脑上保存为 <code>CLAUDE.md</code>，推送：</p>
+<pre><code>adb shell "run-as com.termux sh -c 'mkdir -p /data/data/com.termux/files/home/cc-connect'"
+adb push CLAUDE.md //sdcard//Download//CLAUDE.md
+adb shell "cat /sdcard/Download/CLAUDE.md | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/cc-connect/CLAUDE.md'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>mkdir -p ~/cc-connect
+nano ~/cc-connect/CLAUDE.md    # 贴入内容，Ctrl+X 保存</code></pre>
+      </div>
+
+      <div class="alert alert-tip"><span class="alert-icon">🎭</span><div>CLAUDE.md 改完<strong>无需重启</strong>，下一轮对话自动生效。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEP 8 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">8.</span> 配置 cc-connect</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">8</span><span class="step-title">创建 config.toml — 连接一切</span><span class="step-time">⏱ 3 分钟</span>
+    </div>
+    <div class="step-body">
+      <p><strong>把三个占位符换成第 4 步获取的值。</strong><code>admin_from</code> 先填 <code>"*"</code>，跑起来后发 /whoami 获取 wxid 再改。</p>
+
+<pre><code><span class="lang-label">toml</span>language = "zh"
+idle_timeout_mins = 120
+
+[[projects]]
+  name = "nene"
+  admin_from = "*"   # 先填 *，跑起来后发 /whoami 获取 wxid 再改
+
+  [projects.agent]
+    type = "claudecode"
+    [projects.agent.options]
+      mode = "acceptEdits"
+      quiet = true
+      work_dir = "/data/data/com.termux/files/home/cc-connect"
+      allowed_tools = ["Read", "Write", "Edit"]
+
+  [[projects.platforms]]
+    type = "weixin"
+    [projects.platforms.options]
+      account_id = "你的account_id"       # ← 改
+      allow_from = "*"
+      token = "你的微信token"              # ← 改
+
+[log]
+  level = "info"
+[bridge]
+  enabled = true; port = 9810; token = "bridge-token-随便填"
+[management]
+  enabled = true; port = 9820; token = "mgmt-token-随便填"
+[display]
+  thinking_messages = false; tool_messages = false</code></pre>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式 — 电脑保存后推送</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端 — nano 编辑</button>
+      </div>
+      <div class="method-content method-adb show">
+        <p>电脑上保存为 <code>config.toml</code>，推送：</p>
+<pre><code>adb shell "run-as com.termux sh -c 'mkdir -p /data/data/com.termux/files/home/.cc-connect'"
+adb push config.toml //sdcard//Download//config.toml
+adb shell "cat /sdcard/Download/config.toml | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/.cc-connect/config.toml'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>mkdir -p ~/.cc-connect
+nano ~/.cc-connect/config.toml    # 贴入内容，Ctrl+X 保存</code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEP 9 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">9.</span> 创建启动脚本</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">9</span><span class="step-title">编写 start-nene.sh — 一键启动</span><span class="step-time">⏱ 1 分钟</span>
+    </div>
+    <div class="step-body">
+      <p>启动脚本负责：检查旧实例 → 清理锁文件 → 用 proot 隔离启动 cc-connect。</p>
+
+<pre><code><span class="lang-label">bash</span>#!/data/data/com.termux/files/usr/bin/bash
+echo ""
+echo "  =============================="
+echo "    nene - cc-connect 微信机器人"
+echo "  =============================="
+echo ""
+
+CONFIG="$HOME/.cc-connect/config.toml"
+LOCK="$HOME/.cc-connect/.config.toml.lock"
+
+if [ -f "$LOCK" ]; then
+    echo "[!] 已有实例在运行，先停止..."
+    proot \
+      -b /data/data/com.termux/files/usr:/usr \
+      -b $HOME:/home \
+      -b /dev:/dev -b /proc:/proc \
+      /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin \
+      $HOME/bin/cc-connect --config "$CONFIG" --force 2>/dev/null
+    rm -f "$LOCK"
+    sleep 1
+fi
+
+echo "[*] 启动中..."
+
+SSL_CERT_FILE=/data/data/com.termux/files/usr/etc/tls/cert.pem \
+proot \
+  -b /data/data/com.termux/files/usr:/usr \
+  -b $HOME:/home \
+  -b /dev:/dev -b /proc:/proc \
+  /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin \
+  $HOME/bin/cc-connect --config "$CONFIG" &
+
+sleep 3
+echo "[*] 管理面板: http://127.0.0.1:9820"
+echo "[*] 已启动~"</code></pre>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式 — 电脑保存后推送</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端 — nano 编辑</button>
+      </div>
+      <div class="method-content method-adb show">
+        <p>电脑上保存为 <code>start-nene.sh</code>，推送：</p>
+<pre><code>adb push start-nene.sh //sdcard//Download//start-nene.sh
+adb shell "cat /sdcard/Download/start-nene.sh | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/start-nene.sh && chmod +x /data/data/com.termux/files/home/start-nene.sh'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>nano ~/start-nene.sh    # 贴入代码，Ctrl+X 保存
+chmod +x ~/start-nene.sh</code></pre>
+      </div>
+
+      <div class="alert alert-info"><span class="alert-icon">🔍</span><div><strong>proot 是什么？</strong>Android 的 libc 是 Bionic，而 cc-connect（Go 编译的）需要 glibc 环境。proot 创建 Linux 命名空间隔离，让 cc-connect 以为自己在标准 Linux 上运行。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEP 10 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">10.</span> 启动 & 后台常驻</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">10</span><span class="step-title">启动机器人，保持后台运行</span><span class="step-time">⏱ 1 分钟</span>
+    </div>
+    <div class="step-body">
+      <p>用 <strong>nohup</strong> 启动，关掉 Termux 也不会死：</p>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
+      </div>
+      <div class="method-content method-adb show">
+<pre><code># 先杀旧进程
+adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"
+
+# 启动（写日志到文件）
+adb shell "run-as com.termux sh -c 'nohup /data/data/com.termux/files/usr/bin/bash /data/data/com.termux/files/home/start-nene.sh > /data/data/com.termux/files/home/nene.log 2>&1 &'"
+
+# 等 5 秒后确认
+sleep 5
+adb shell "run-as com.termux sh -c 'cat /data/data/com.termux/files/home/nene.log'"</code></pre>
+        <p>看到 <code>cc-connect is running</code> 就是成功了。</p>
+        <div class="alert alert-warn"><span class="alert-icon">⚠️</span><div>如果日志里看到 <code>proot: command not found</code>，说明 ADB 环境 PATH 不全。此时<strong>必须在手机 Termux 里手动执行下方手机端的 nohup 命令</strong>。</div></div>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>termux-wake-lock acquire     # 防止 Android 杀后台
+nohup bash ~/start-nene.sh > ~/nene.log 2>&1 &</code></pre>
+        <p>看到 <code>[已启动~]</code> 即可关 Termux。</p>
+      </div>
+
+      <p><strong>验证是否在跑：</strong></p>
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
+      </div>
+      <div class="method-content method-adb show">
+<pre><code>adb shell "run-as com.termux sh -c 'pgrep -f cc-connect && echo 在跑 || echo 没跑'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>pgrep -f cc-connect    # 返回数字 = 在跑</code></pre>
+      </div>
+
+      <p><strong>查看日志：</strong></p>
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
+      </div>
+      <div class="method-content method-adb show">
+<pre><code>adb shell "run-as com.termux sh -c 'tail -30 /data/data/com.termux/files/home/nene.log'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>tail -f ~/nene.log    # 实时滚动，Ctrl+C 退出</code></pre>
+      </div>
+
+      <p><strong>停止：</strong></p>
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
+      </div>
+      <div class="method-content method-adb show">
+<pre><code>adb shell "run-as com.termux sh -c 'pkill -f cc-connect && termux-wake-lock release'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>pkill -f cc-connect
+termux-wake-lock release</code></pre>
+      </div>
+
+      <div class="alert alert-info"><span class="alert-icon">💡</span><div>如果看到 <code>terminated with signal 9</code> 别慌——那是脚本自动杀了旧进程，紧接着会启新的。</div></div>
+
+      <div class="alert alert-tip"><span class="alert-icon">📱</span><div><strong>手机端防杀后台（三步缺一不可）：</strong><br>① Termux 设置 → Behavior → 勾上「Keep notification open」<br>② 系统设置 → 应用 → Termux → 电池 → 设为「无限制」<br>③ 多任务界面 → 下拉锁住 Termux，防止一键清理</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 完成 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">✅</span> 部署完成</div>
+  <p style="font-size:1.05em;color:#a0d0a0">恭喜！你的微信机器人已经在运行了。🎉</p>
+  <p><strong>测试：</strong>用另一个微信号给机器人发消息，3-10 秒收到 AI 回复。</p>
+  <p><strong>管理面板：</strong><code>http://127.0.0.1:9820</code></p>
+  <p><strong>日常维护：</strong></p>
+  <ul style="margin-left:20px;line-height:2;color:#b0b0c0">
+    <li>改 CLAUDE.md → <strong>无需重启</strong>，下一轮自动生效</li>
+    <li>改代码或 config → 需要重启</li>
+    <li>重启手机后 → 开 Termux → <code>termux-wake-lock acquire && nohup bash ~/start-nene.sh > ~/nene.log 2>&1 &</code></li>
+  </ul>
+</div>
+
+<!-- ====== 使用方法 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">📖</span> 使用方法</div>
+
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">1</span>
+      <span class="step-title">基本对话</span>
+    </div>
+    <div class="step-body">
+      <p>用另一个微信号给机器人的微信<strong>发任意消息</strong>，bot 会自动回复。首次回复 10-30 秒，后续 3-10 秒。</p>
+      <p>bot 有<strong>对话记忆</strong>——同一段会话内记得之前聊过什么。如果超过 <code>idle_timeout_mins</code>（默认 120 分钟）没说话，会话重置。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">2</span>
+      <span class="step-title">获取你的微信 ID（/whoami）</span>
+    </div>
+    <div class="step-body">
+      <p>给 bot 发：</p>
+<pre><code>/whoami</code></pre>
+      <p>bot 会返回你的微信 ID（类似 <code>o9cq8xxx@im.wechat</code>）。拿到后填进 config.toml 的 <code>admin_from</code>，你就是管理员了。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">3</span>
+      <span class="step-title">管理面板</span>
+    </div>
+    <div class="step-body">
+      <p>手机浏览器打开：</p>
+<pre><code>http://127.0.0.1:9820</code></pre>
+      <p>可以查看 bot 运行状态、活跃会话、消息日志。token 是 config.toml 里 <code>management.token</code> 的值。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">4</span>
+      <span class="step-title">修改人设（实时生效）</span>
+    </div>
+    <div class="step-body">
+      <p>编辑 <code>~/cc-connect/CLAUDE.md</code>，改完保存。<strong>无需重启</strong>，下一轮对话自动用新人设。</p>
+      <p>这意味着你可以随时调整 bot 的性格、回复风格、规则，改完发条消息就能看到效果。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">5</span>
+      <span class="step-title">多轮对话 & 会话管理</span>
+    </div>
+    <div class="step-body">
+      <p>bot 会记住<strong>同一段会话</strong>内的上下文。聊到一半切话题也能接上。</p>
+      <p>会话在以下情况重置：</p>
+      <ul style="margin-left:20px;line-height:2;color:#b0b0c0">
+        <li>超过 <code>idle_timeout_mins</code> 分钟没说话（默认 120）</li>
+        <li>bot 重启</li>
+        <li>对话历史超过长度上限自动裁剪旧消息</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">6</span>
+      <span class="step-title">添加更多微信好友使用</span>
+    </div>
+    <div class="step-body">
+      <p>默认 <code>allow_from = "*"</code>，任何微信好友都能和 bot 对话，且每人有独立会话。</p>
+      <p>如果想限定只有特定人能聊，把 <code>allow_from</code> 改成白名单（逗号分隔的 wxid 列表）。</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ====== ADB 运维速查 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">🖥️</span> ADB 运维速查</div>
+  <div class="final-tree">
+    <div style="color:#9090b0;margin-bottom:6px"># 查看状态</div>
+    <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'pgrep -f cc-connect && echo 在跑 || echo 没跑'"</span></div>
+    <br>
+    <div style="color:#9090b0;margin-bottom:6px"># 看日志</div>
+    <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'tail -30 /data/data/com.termux/files/home/nene.log'"</span></div>
+    <br>
+    <div style="color:#9090b0;margin-bottom:6px"># 重启</div>
+    <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"</span></div>
+    <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'nohup /data/data/com.termux/files/usr/bin/bash /data/data/com.termux/files/home/start-nene.sh > /data/data/com.termux/files/home/nene.log 2>&1 &'"</span></div>
+    <br>
+    <div style="color:#9090b0;margin-bottom:6px"># 更新 CLAUDE.md（无需重启）</div>
+    <div><span style="color:#c8c8d4">adb push CLAUDE.md //sdcard//Download//</span></div>
+    <div><span style="color:#c8c8d4">adb shell "cat /sdcard/Download/CLAUDE.md | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/cc-connect/CLAUDE.md'"</span></div>
+    <br>
+    <div style="color:#9090b0;margin-bottom:6px"># 更新 JS 脚本（需重启）</div>
+    <div><span style="color:#c8c8d4">adb push claude-fast.js //sdcard//Download//</span></div>
+    <div><span style="color:#c8c8d4">adb shell "cat /sdcard/Download/claude-fast.js | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/bin/claude-fast.js && chmod +x /data/data/com.termux/files/home/bin/claude-fast.js'"</span></div>
+    <br>
+    <div style="color:#9090b0;margin-bottom:6px"># 停止</div>
+    <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'pkill -f cc-connect && termux-wake-lock release'"</span></div>
+    <br>
+    <div style="color:#9090b0;margin-bottom:6px"># 无线 ADB（不想插线）</div>
+    <div><span style="color:#c8c8d4">adb tcpip 5555</span></div>
+    <div><span style="color:#c8c8d4">adb connect 手机IP:5555</span></div>
+    <div style="color:#707088;font-size:0.82em">重启手机后要重新 USB 连一次。</div>
+  </div>
+</div>
+
+<!-- ====== 常见问题 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">❓</span> 常见问题</div>
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')"><span class="step-num" style="background:#5a5a78">Q</span><span class="step-title">消息发出去没回复？</span></div>
+    <div class="step-body">
+      <ol style="margin-left:20px;line-height:2">
+        <li>bot 在跑吗？<code>pgrep -f cc-connect</code></li>
+        <li>API Key 对了吗？<code>cat ~/bin/claude-fast.js | grep API_KEY</code></li>
+        <li>微信 token 过期了吗？需要重新扫码</li>
+      </ol>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')"><span class="step-num" style="background:#5a5a78">Q</span><span class="step-title">回复很慢？</span></div>
+    <div class="step-body">
+      <p>首条 5-30 秒正常。后续 3-10 秒。持续慢：精简 CLAUDE.md、检查网络。</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')"><span class="step-num" style="background:#5a5a78">Q</span><span class="step-title">怎么换 AI？</span></div>
+    <div class="step-body">
+      <p>改 <code>~/bin/claude-fast.js</code> 里的 <code>API_KEY</code>、<code>BASE_URL</code>、<code>MODEL</code>。兼容 OpenAI 格式的 API 都可以。</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')"><span class="step-num" style="background:#5a5a78">Q</span><span class="step-title">怎么改机器人性格？</span></div>
+    <div class="step-body"><p>编辑 <code>~/cc-connect/CLAUDE.md</code>，改完保存即可，无需重启。</p></div>
+  </div>
+</div>
+
+<!-- ====== 最终文件结构 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">📁</span> 最终文件结构</div>
+  <div class="final-tree">
+    <div><span class="dir">手机 ~/</span></div>
+    <div style="padding-left:20px"><span class="dir">├── bin/</span></div>
+    <div style="padding-left:40px"><span class="file">│   ├── cc-connect</span>          <span class="comment">← 消息桥接器</span></div>
+    <div style="padding-left:40px"><span class="file">│   └── claude-fast.js</span>      <span class="comment">← AI 桥接脚本</span></div>
+    <div style="padding-left:20px"><span class="dir">├── cc-connect/</span></div>
+    <div style="padding-left:40px"><span class="file">│   └── CLAUDE.md</span>            <span class="comment">← 系统人设</span></div>
+    <div style="padding-left:20px"><span class="file">├── start-nene.sh</span>            <span class="comment">← 启动脚本</span></div>
+    <div style="padding-left:20px"><span class="file">├── nene.log</span>                 <span class="comment">← 运行日志</span></div>
+    <div style="padding-left:20px"><span class="dir">└── .cc-connect/</span></div>
+    <div style="padding-left:40px"><span class="file">    └── config.toml</span>          <span class="comment">← cc-connect 配置</span></div>
+    <br>
+    <div><span class="file">/usr/bin/claude</span> → <span class="file">~/bin/claude-fast.js</span>  <span class="comment">← 包装器</span></div>
+    <br>
+    <div style="color:#9090b0">电脑上（ADB 方式，方便后续编辑）：</div>
+    <div style="padding-left:20px"><span class="file">├── claude-fast.js</span></div>
+    <div style="padding-left:20px"><span class="file">├── CLAUDE.md</span></div>
+    <div style="padding-left:20px"><span class="file">├── config.toml</span></div>
+    <div style="padding-left:20px"><span class="file">└── start-nene.sh</span></div>
+  </div>
+</div>
+
+<!-- ====== 局限与注意事项 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">⚠️</span> 局限与注意事项</div>
+
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num" style="background:#8a5a3a">1</span>
+      <span class="step-title">Android 杀后台 — 可能需要小窗运行 Termux</span>
+    </div>
+    <div class="step-body">
+      <p>即使开了 <code>termux-wake-lock</code>、关了电池优化、锁了多任务卡片，部分手机厂商（小米/华为/OPPO/vivo）仍会在切后台几分钟后杀死 Termux 进程。这是 Android 厂商的省电策略，<strong>无法彻底解决</strong>。</p>
+      <p><strong>应对：</strong>把 Termux 开在<strong>分屏/小窗模式</strong>，让它始终在前台可见。bot 就能一直跑。缺点是占屏幕一角。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num" style="background:#8a5a3a">2</span>
+      <span class="step-title">微信 token 会过期</span>
+    </div>
+    <div class="step-body">
+      <p>微信扫码获取的 token 不是永久的，可能几天或几周后失效。表现为消息发出去没有回复，日志里可能看到平台断开。</p>
+      <p><strong>应对：</strong>重新执行 <code>~/bin/cc-connect weixin setup --project nene</code> 扫码，然后把新的 token 和 account_id 更新到 config.toml，重启 bot。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num" style="background:#8a5a3a">3</span>
+      <span class="step-title">微信机器人存在封号风险</span>
+    </div>
+    <div class="step-body">
+      <p>这是微信非官方使用方式，不是正规 API。微信有权封禁账号。<strong>绝对不要用主号。</strong></p>
+      <p>降低风险：控制消息频率、不拉群、不加好友、不在群聊里高频回复。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num" style="background:#8a5a3a">4</span>
+      <span class="step-title">ADB 方式不能完全替代手机操作</span>
+    </div>
+    <div class="step-body">
+      <p>ADB 的 <code>run-as</code> 环境缺少 Termux 的完整 PATH，<code>proot</code>、<code>bash</code> 等命令可能找不到。遇到 <code>command not found</code> 时，必须在手机 Termux 里手动执行对应命令。</p>
+      <p>而且每次重启手机后 USB 调试可能自动关闭，需要重新连电脑授权。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num" style="background:#8a5a3a">5</span>
+      <span class="step-title">DeepSeek API 有时会挂</span>
+    </div>
+    <div class="step-body">
+      <p>DeepSeek 服务偶尔不稳定（超时、500 错误、模型繁忙）。表现为消息发出去很久没回，或者回复「解析失败」。</p>
+      <p><strong>应对：</strong>等几分钟重试。或者换一个 API 供应商（改 <code>claude-fast.js</code> 里的 <code>BASE_URL</code> 和 <code>API_KEY</code>）。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num" style="background:#8a5a3a">6</span>
+      <span class="step-title">大文件 CLAUDE.md 拉低首次响应速度</span>
+    </div>
+    <div class="step-body">
+      <p>如果 CLAUDE.md 很大（如 45KB），首次消息需等待 10-30 秒（加载 system prompt + API 首响应）。后续消息因为上下文复用会快很多（3-10 秒），但如果对话太长导致历史被裁剪，下次又会慢。</p>
+      <p><strong>应对：</strong>精简 CLAUDE.md 到 5-10KB，只保留核心规则。人格细节可以写在外部文件让 AI 自行读取。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num" style="background:#8a5a3a">7</span>
+      <span class="step-title">手机性能影响体验</span>
+    </div>
+    <div class="step-body">
+      <p>老旧手机运行 Node.js + proot 会吃力。CPU 满载时回复可能 >30 秒，或 Termux 被系统以「资源占用过高」为由杀死。</p>
+      <p><strong>建议：</strong>用闲置的中高端手机（骁龙 7 系以上，4GB+ RAM），不要用日常主力机。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num" style="background:#8a5a3a">8</span>
+      <span class="step-title">cc-connect 项目本身的风险</span>
+    </div>
+    <div class="step-body">
+      <p>cc-connect 是第三方开源项目，GitHub 仓库可能停更、被删、或被微信协议变更导致不可用。没有官方 SLA，坏了只能自己修。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 页脚 ====== -->
+<div style="text-align:center;padding:40px 0 20px;color:#505068;font-size:0.82em">
+  <p>cc-connect 微信机器人 · 部署教程</p>
+  <p>项目地址：<a href="https://github.com/chenhg5/cc-connect" style="color:#6060a0">github.com/chenhg5/cc-connect</a></p>
+  <p style="margin-top:8px">更新时间：2026-06-13</p>
+</div>
+
+</div><!-- .main -->
+
+<script>
+// 复制按钮
+document.querySelectorAll('pre').forEach(pre => {
+  const btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.textContent = '📋 复制';
+  btn.onclick = () => {
+    const code = pre.querySelector('code');
+    const text = code ? code.textContent : pre.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✅ 已复制';
+      setTimeout(() => btn.textContent = '📋 复制', 1500);
+    }).catch(() => {
+      const range = document.createRange();
+      range.selectNodeContents(code || pre);
+      const sel = window.getSelection();
+      sel.removeAllRanges(); sel.addRange(range);
+      btn.textContent = '📝 请 Ctrl+C';
+      setTimeout(() => btn.textContent = '📋 复制', 1500);
+    });
+  };
+  pre.style.position = 'relative';
+  pre.appendChild(btn);
+});
+</script>
+
+  <footer style="text-align:center; padding:40px 20px; color:#707088; font-size:0.85em; border-top:1px solid #e8e8f0; margin-top:40px;">
+    <p>📱 pocket-wechat-bot · 一部手机 = 一个 AI 角色，微信即界面，零云成本</p>
+    <p style="margin-top:8px;">本教程为粉丝项目，与微信/腾讯、柚子社、DeepSeek 无任何关联。仅供个人学习使用。</p>
+  </footer>
+
+</body>
+</html>

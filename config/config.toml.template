@@ -1,0 +1,92 @@
+# ============================================================
+# pocket-wechat-bot · cc-connect 配置文件模板
+# 复制此文件为 ~/.cc-connect/config.toml 并填入你的信息
+# ============================================================
+
+data_dir = ""
+attachment_send = ""
+language = "zh"
+idle_timeout_mins = 120
+
+# ---- 项目定义 ----
+[[projects]]
+  name = "nene"                          # 项目名，可自定义
+  show_context_indicator = false
+  reply_footer = false
+  inject_sender = false
+  admin_from = "<YOUR_WECHAT_OPENID>@im.wechat"  # ← 你的微信 OpenID
+
+  # ---- Agent 配置 ----
+  [projects.agent]
+    type = "claudecode"
+
+    [projects.agent.options]
+      allowed_tools = ["Read", "Grep", "Glob", "Skill", "Write", "Edit"]
+      mode = "acceptEdits"
+      quiet = true
+      work_dir = "/data/data/com.termux/files/home/cc-connect"
+
+  # ---- AI 提供商 ----
+  provider = "deepseek"
+
+    [[projects.agent.providers]]
+      name = "deepseek"
+      api_key = "<YOUR_DEEPSEEK_API_KEY>"     # ← 你的 DeepSeek API Key
+      base_url = "https://api.deepseek.com/v1"
+      model = "deepseek-v4-pro"               # 或 deepseek-chat
+
+  # ---- 微信平台 ----
+  [[projects.platforms]]
+    type = "weixin"
+
+    [projects.platforms.options]
+      account_id = "<YOUR_BOT_ACCOUNT_ID>"    # ← 你的微信 Bot 账号 ID
+      allow_from = "*"
+      base_url = "https://ilinkai.weixin.qq.com"
+      token = "<YOUR_BOT_TOKEN>"              # ← 你的微信 Bot Token
+
+# ---- 日志 ----
+[log]
+  level = "info"
+
+# ---- 语音（可选）----
+[speech]
+  enabled = false
+  provider = ""
+
+# ---- 显示设置 ----
+[display]
+  thinking_messages = false
+  thinking_max_len = 300
+  tool_max_len = 500
+  tool_messages = false
+
+[stream_preview]
+  enabled = true
+  interval_ms = 600
+
+# ---- 频率限制 ----
+[rate_limit]
+  max_messages = 20
+  window_secs = 60
+
+# ---- 管理面板 ----
+[management]
+  enabled = true
+  port = 9820
+  token = "<YOUR_MGMT_TOKEN>"               # ← 管理面板访问令牌（可随机生成）
+  cors_origins = ["*"]
+
+[bridge]
+  enabled = true
+  port = 9810
+  token = "<YOUR_BRIDGE_TOKEN>"             # ← Bridge 令牌（可随机生成）
+  cors_origins = ["*"]
+
+# ---- 定时任务（可选）----
+[cron]
+  session_mode = ""
+
+# ---- Webhook（可选）----
+[webhook]
+  port = 0
