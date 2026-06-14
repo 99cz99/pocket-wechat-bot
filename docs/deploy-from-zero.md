@@ -97,8 +97,8 @@ let systemPrompt = '';
 try {
   systemPrompt = fs.readFileSync(path.join(WORK_DIR, 'CLAUDE.md'), 'utf-8');
 } catch (e) {
-  // 实际人设从 CLAUDE.md 读取，这里只是示例回退值，按你的角色自行修改
-  systemPrompt = '用简体中文回复，简洁直接。';
+  // 仅当 CLAUDE.md 不存在/无法读取时作为兜底，正常运行时不会触发
+  systemPrompt = '你是绫地宁宁，用温柔害羞的语气回复，简体中文，简短直接。';
 }
 
 // 对话历史（system prompt 在第一条，后续消息往后加）
