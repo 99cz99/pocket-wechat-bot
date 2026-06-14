@@ -542,7 +542,7 @@ adb shell "run-as com.termux sh -c 'cp -r ~/pocket-wechat-bot/skills/nene ~/.cla
         <p><strong>步骤 B：复制 config.toml 模板</strong></p>
 <pre><code>adb shell "run-as com.termux sh -c 'cp ~/pocket-wechat-bot/config/config.toml.template ~/.cc-connect/config.toml'"</code></pre>
         <p><strong>步骤 C：在电脑上编辑 config.toml</strong>（仓库里已有模板）</p>
-        <p>用 VSCode 打开仓库的 <code>config/config.toml.template</code>，改好三个占位符后推送到手机：</p>
+        <p>用 VSCode 打开仓库的 <code>config/config.toml.template</code>，改好占位符后<strong>另存为 <code>config.toml</code></strong>（去掉 <code>.template</code> 后缀），然后推送到手机：</p>
 <pre><code>adb push config\config.toml /sdcard/Download/config.toml
 adb shell "cat /sdcard/Download/config.toml | run-as com.termux sh -c 'cat > ~/.cc-connect/config.toml'"</code></pre>
       </div>
@@ -556,7 +556,7 @@ cp -r ~/pocket-wechat-bot/skills/nene ~/.claude/skills/</code></pre>
 nano ~/.cc-connect/config.toml</code></pre>
       </div>
 
-      <p><strong>config.toml 中必须修改的三个占位符：</strong></p>
+      <p><strong>config.toml 中必须修改的占位符（admin_from 可先填 "*"）：</strong></p>
 <pre><code>admin_from = "&lt;YOUR_WECHAT_OPENID&gt;@im.wechat"   # 先填 "*"，跑起来后发 /whoami 获取再改
 api_key = "&lt;YOUR_DEEPSEEK_API_KEY&gt;"           # DeepSeek API Key
 account_id = "&lt;YOUR_BOT_ACCOUNT_ID&gt;"          # 第 5 步扫码获取的
@@ -837,8 +837,8 @@ adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"
     <div style="color:#9090b0;margin-bottom:6px"># 查看状态</div>
     <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'pgrep -f cc-connect && echo 在跑 || echo 没跑'"</span></div>
     <br>
-    <div style="color:#9090b0;margin-bottom:6px"># 看日志（如果用了 nohup）</div>
-    <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'tail -30 ~/nene.log'"</span></div>
+    <div style="color:#9090b0;margin-bottom:6px"># 看日志（bot-debug.log，记录工具调用和会话注入）</div>
+    <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'tail -30 ~/cc-connect/bot-debug.log'"</span></div>
     <br>
     <div style="color:#9090b0;margin-bottom:6px"># 重启</div>
     <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"</span></div>
@@ -925,7 +925,6 @@ adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"
     <div style="padding-left:40px"><span class="dir">│   └── skills/</span></div>
     <div style="padding-left:60px"><span class="dir">│       └── nene/</span>            <span class="comment">← 人格数据</span></div>
     <div style="padding-left:20px"><span class="file">├── start-nene.sh</span>            <span class="comment">← 启动脚本</span></div>
-    <div style="padding-left:20px"><span class="file">├── nene.log</span>                 <span class="comment">← 运行日志（tmux 方式无此文件）</span></div>
     <div style="padding-left:20px"><span class="dir">└── .cc-connect/</span></div>
     <div style="padding-left:40px"><span class="file">    └── config.toml</span>          <span class="comment">← cc-connect 配置</span></div>
     <br>

@@ -866,7 +866,10 @@ adb devices
 ### 步骤 2：PC 上编辑配置
 
 ```bash
-# 在 VSCode/记事本编辑仓库里的 config.toml
+# 首次：从模板创建 config.toml（此文件在 .gitignore 中，不会被提交）
+copy config\config.toml.template config\config.toml
+
+# 在 VSCode/记事本编辑
 code config\config.toml
 ```
 
@@ -909,7 +912,6 @@ scripts\push-config.bat
 │       ├── resolv.conf      ← DNS 配置（从 Termux 复制）
 │       └── ssl/             ← TLS 证书（从 Termux 复制）
 ├── start-nene.sh            ← 启动脚本
-├── nene.log                 ← 运行日志（tmux 方式无此文件）
 ├── .claude/
 │   └── skills/
 │       └── nene/            ← 人格数据（SKILL.md + affinity.json + 调研资料）

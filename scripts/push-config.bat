@@ -1,6 +1,7 @@
 @echo off
 REM push-config.bat — 从 PC 推送配置到手机并重启 bot
 REM 需要: adb 已连接 + USB 调试已授权
+REM 首次使用前: 复制 config.toml.template → config.toml 并填入凭据（config.toml 在 .gitignore 中）
 
 echo [*] 推送 config.toml 到手机...
 adb push "%~dp0..\config\config.toml" /sdcard/config.toml
