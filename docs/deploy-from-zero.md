@@ -28,6 +28,15 @@ pkg install nodejs git curl proot -y
 
 node --version
 # 确认 Node.js 装好了，应显示 v20+
+
+git --version
+# 确认 Git 装好了，应显示 git version 2.x
+
+curl --version
+# 确认 curl 装好了，应显示 curl 8.x
+
+which proot
+# 确认 proot 装好了，应显示 /data/data/com.termux/files/usr/bin/proot
 ```
 
 ## 3. 装 cc-connect
@@ -43,15 +52,20 @@ chmod +x ~/bin/cc-connect
 # 加执行权限
 
 ~/bin/cc-connect --version
-# 确认能跑
+# 确认能跑，应显示版本号
+
+ls -la ~/bin/cc-connect
+# 确认文件存在且有执行权限（-rwx）
 ```
 
 ## 4. 获取微信 token
 
 ```bash
 ~/bin/cc-connect weixin setup --project nene
-# 弹出二维码，微信扫码后终端打印 token 和 account_id，记下来
+# 弹出二维码（若未显示图片则点击终端里的链接），微信扫码后终端打印 token 和 account_id，记下来
 ```
+
+> ✅ 验证：确认终端打印了 `token: wx_...` 和 `account_id: ...@im.wechat` 两行。
 
 ## 5. 创建 claude-fast.js
 
@@ -82,7 +96,8 @@ let systemPrompt = '';
 try {
   systemPrompt = fs.readFileSync(path.join(WORK_DIR, 'CLAUDE.md'), 'utf-8');
 } catch (e) {
-  systemPrompt = '你是绫地宁宁。温柔害羞，简体中文，简洁回复。';
+  // 实际人设从 CLAUDE.md 读取，这里只是示例回退值，按你的角色自行修改
+  systemPrompt = '用简体中文回复，简洁直接。';
 }
 
 // 对话历史（system prompt 在第一条，后续消息往后加）
@@ -161,6 +176,12 @@ rl.on('line', (line) => {
 ```bash
 chmod +x ~/bin/claude-fast.js
 # 加执行权限
+
+ls -la ~/bin/claude-fast.js
+# 确认文件存在
+
+node -c ~/bin/claude-fast.js
+# 语法检查，无输出 = 无错误
 ```
 
 ## 6. 替换 /usr/bin/claude
@@ -175,6 +196,12 @@ EOF
 
 chmod +x /data/data/com.termux/files/usr/bin/claude
 # 加执行权限
+
+ls -la /data/data/com.termux/files/usr/bin/claude
+# 确认文件存在且有执行权限
+
+cat /data/data/com.termux/files/usr/bin/claude
+# 确认内容是包装器脚本（应显示 exec /usr/bin/node ...）
 ```
 
 ## 7. 创建工作目录和 CLAUDE.md
@@ -199,14 +226,21 @@ CLAUDE.md 内容：
 - 状态栏、进度条
 
 ## 要求
-- 直接给结果，像普通聊天一样
+- 直接给结果，像普通聊天一样回复
 - 始终用简体中文
-- 简洁不废话
 
 ## 当前人格
 你是绫地宁宁。温柔害羞，姬松学院二年级。
 被戳破心事时容易慌张（"啊哇哇"），极度害羞会黑化。
 对信任的人撒娇黏人。提到美食双眼放光。
+```
+
+```bash
+ls -la ~/cc-connect/CLAUDE.md
+# 确认文件存在
+
+wc -l ~/cc-connect/CLAUDE.md
+# 确认有内容（应显示 10+ 行）
 ```
 
 ## 8. 配置 cc-connect
@@ -264,6 +298,11 @@ idle_timeout_mins = 120
   tool_messages = false
 ```
 
+```bash
+ls -la ~/.cc-connect/config.toml
+# 确认配置文件存在
+```
+
 ## 9. 创建启动脚本
 
 ```bash
@@ -312,6 +351,12 @@ echo "[*] 已启动~"
 ```bash
 chmod +x ~/start-nene.sh
 # 加执行权限
+
+ls -la ~/start-nene.sh
+# 确认文件存在且有执行权限
+
+bash -n ~/start-nene.sh
+# 语法检查，无输出 = 无错误
 ```
 
 ## 10. 启动
@@ -319,6 +364,9 @@ chmod +x ~/start-nene.sh
 ```bash
 bash ~/start-nene.sh
 # 看到 "cc-connect is running" 就是成功了
+
+pgrep -f cc-connect
+# 确认进程在跑（返回一串数字 = 在跑）
 ```
 
 ## 11. 后台常驻
@@ -335,6 +383,13 @@ bash ~/start-nene.sh
 
 # 按 Ctrl+B 然后按 D → 断开 tmux，进程继续跑
 # 重新连接：tmux attach -t nene
+
+# 验证 tmux 会话存在
+tmux ls
+# 应显示 nene: 1 windows...
+
+pgrep -f cc-connect
+# 确认断开后进程还在跑
 ```
 
 ## 12. 防止 Android 杀掉 Termux（重要）

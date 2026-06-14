@@ -2,7 +2,7 @@
 
 > 一部手机 = 一个 AI 角色。微信即界面，零云成本。
 
-基于 [cc-connect](https://github.com/chenhg5/cc-connect) 的 Android 微信 AI 机器人，运行在 Termux + proot 上，使用 DeepSeek API 驱动角色人格。不需要云主机，不需要公网 IP——你的旧安卓手机就是服务器。
+基于 [cc-connect](https://github.com/chenhg5/cc-connect) 的 Android 微信 AI 机器人，运行在 Termux + proot 上，使用 DeepSeek API 驱动角色人格。不需要云主机，不需要公网 IP——你的安卓手机就是服务器。
 
 ---
 
@@ -34,6 +34,18 @@
 
 ## 快速开始
 
+### 无脑部署 🤖
+
+**把以下链接丢给你的 PC 端 AI，让它帮你搞定一切：**
+
+```
+https://github.com/99cz99/pocket-wechat-bot.git
+```
+
+> USB 连接手机 → 把链接 +「照教程帮我部署」发给 Claude Code（或任何能执行命令的 AI）→ AI 自己读文档、敲命令、部署。你只需在微信扫码那步掏出手机扫一下。
+
+不想依赖 AI？按下面手动来：
+
 ### 1. 准备环境
 
 在 Android 手机上安装 [Termux](https://f-droid.org/packages/com.termux/)，然后：
@@ -41,6 +53,7 @@
 ```bash
 pkg update && pkg upgrade
 pkg install proot nodejs git curl -y
+# 验证: node --version（应 v20+）、git --version、which proot
 ```
 
 ### 2. 下载 cc-connect
@@ -49,6 +62,7 @@ pkg install proot nodejs git curl -y
 mkdir -p ~/bin
 curl -L "https://github.com/chenhg5/cc-connect/releases/latest/download/cc-connect-linux-arm64" -o ~/bin/cc-connect
 chmod +x ~/bin/cc-connect
+# 验证: ~/bin/cc-connect --version（应显示版本号）
 ```
 
 ### 3. 克隆项目
@@ -76,6 +90,7 @@ source ~/.bashrc
 # 人格文件和系统提示词
 cp -r skills/nene ~/.claude/skills/
 cp CLAUDE.md ~/cc-connect/CLAUDE.md
+# 验证: ls ~/cc-connect/CLAUDE.md ~/.cc-connect/config.toml
 ```
 
 ### 5. 获取微信凭据
@@ -85,6 +100,8 @@ cp CLAUDE.md ~/cc-connect/CLAUDE.md
 ~/bin/cc-connect weixin setup --project nene
 # 把输出的 token 和 account_id 填入 ~/.cc-connect/config.toml
 ```
+
+> 💡 如果终端没有直接显示二维码，而是显示了一个链接——点击那个链接，在浏览器里打开二维码。
 
 ### 6. 创建 claude 包装器
 
@@ -100,6 +117,7 @@ chmod +x /data/data/com.termux/files/usr/bin/claude
 
 # 安装 claude-fast.js
 cp claude-fast.js ~/bin/claude-fast.js
+# 验证: node -c ~/bin/claude-fast.js（无输出=语法正确）
 ```
 
 ### 7. 启动并保持后台
@@ -115,6 +133,7 @@ bash scripts/start-bot.sh
 # 看到 "cc-connect is running" 后
 # 按 Ctrl+B 然后 D → 断开 tmux，bot 继续跑
 # 重新连接：tmux attach -t nene
+# 验证: pgrep -f cc-connect（返回数字=在跑）、tmux ls
 ```
 
 > ⚠️ **重要**：Android 系统可能杀 Termux 后台进程。需在手机设置中允许 Termux 后台运行，详见 [部署教程第 12 步](docs/deploy-from-zero.md#12-防止-android-杀掉-termux重要)
