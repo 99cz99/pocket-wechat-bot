@@ -28,3 +28,4 @@ scripts/run-bot-wrapper.sh
 .vscode/
 .idea/
 pocket-wechat-bot-latest.zip
+temp-update.js
