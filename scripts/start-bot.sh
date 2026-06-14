@@ -16,6 +16,12 @@ if [ ! -f "$RESOLV_CONF" ]; then
     echo "nameserver 223.5.5.5" >> "$RESOLV_CONF"
 fi
 
+# 防止 Android 杀后台
+if command -v termux-wake-lock > /dev/null 2>&1; then
+    termux-wake-lock 2>/dev/null
+    echo "[*] wake-lock 已激活"
+fi
+
 echo ""
 echo "  =============================="
 echo "    nene - cc-connect 微信机器人"

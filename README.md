@@ -78,8 +78,9 @@ cd pocket-wechat-bot
 ```bash
 # proot 需要 DNS 和 SSL 证书，从 Termux 复制
 mkdir -p ~/proot-fs/etc/ssl
-cp /data/data/com.termux/files/usr/etc/resolv.conf ~/proot-fs/etc/resolv.conf
+cp /data/data/com.termux/files/usr/etc/resolv.conf /data/local/tmp/resolv.conf
 cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/
+# start-bot.sh 会自动管理 /data/local/tmp/resolv.conf，这里只是首次创建
 ```
 
 ### 5. 配置
@@ -99,6 +100,8 @@ source ~/.bashrc
 # 人格文件和系统提示词
 cp -r skills/nene ~/.claude/skills/
 cp CLAUDE.md ~/cc-connect/CLAUDE.md
+# 编辑 CLAUDE.md，替换 <YOUR_WECHAT_OPENID> 为你的微信 OpenID（通过 /whoami 获取）
+nano ~/cc-connect/CLAUDE.md
 
 # 启动脚本
 cp scripts/start-bot.sh ~/start-nene.sh
@@ -149,7 +152,7 @@ bash ~/start-nene.sh
 # 验证: pgrep -f cc-connect（返回数字=在跑）、tmux ls
 ```
 
-> ⚠️ **重要**：Android 系统可能杀 Termux 后台进程。需在手机设置中允许 Termux 后台运行，详见 [部署教程第 12 步](docs/deploy-from-zero.md#12-防止-android-杀掉-termux重要)
+> ⚠️ **重要**：Android 系统可能杀 Termux 后台进程。需在手机设置中允许 Termux 后台运行，详见 [部署教程第 13 步](docs/deploy-from-zero.md#13-防止-android-杀掉-termux重要)
 
 详细教程见 [docs/deploy-from-zero.md](docs/deploy-from-zero.md)
 

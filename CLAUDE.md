@@ -3,6 +3,7 @@
 ## 人格切换协议
 
 当 admin（微信 ID `<YOUR_WECHAT_OPENID>@im.wechat`）发送切换指令时，执行人格切换：
+<!-- 部署后请把 <YOUR_WECHAT_OPENID> 替换为你的微信 OpenID（通过 /whoami 获取） -->
 
 **触发词**：`切换 <name>` / `换成 <name>` / `切换到 <name>` / `<name>人格`
 

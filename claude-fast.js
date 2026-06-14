@@ -11,7 +11,7 @@ const readline = require('readline');
 
 const API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.deepseek.com/v1';
-const MODEL = 'deepseek-v4-pro';
+const MODEL = process.env.MODEL || 'deepseek-v4-pro';
 const HOME = process.env.HOME || '/data/data/com.termux/files/home';
 const WORK_DIR = HOME + '/cc-connect';
 const MAX_TOOL_ROUNDS = 5;

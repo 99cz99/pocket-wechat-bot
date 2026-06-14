@@ -1,3 +1,12 @@
+# ⚠️ 历史文档 · 方案已废弃
+
+> **当前项目使用 `claude-fast.js`（一个纯 Node.js 脚本）替代原生 Claude Code。**
+> 本文档描述的是另一种已被放弃的方案（在 Android 上运行真正的 Claude Code 二进制）。
+> 如果你只是在部署 pocket-wechat-bot，**不需要阅读本文档**。
+> 保留此文仅供技术参考。
+>
+> ---
+
 # Android/Termux 运行 Claude Code 原生二进制完全指南
 
 ## 问题背景

@@ -414,7 +414,7 @@ ls -la ~/bin/cc-connect        # 确认有 -rwx 权限</code></pre>
       </div>
       <div class="method-content method-adb show">
 <pre><code>adb shell "run-as com.termux sh -c 'cd ~ && git clone https://github.com/99cz99/pocket-wechat-bot.git'"
-adb shell "run-as com.termux sh -c 'mkdir -p ~/proot-fs/etc/ssl && cp /data/data/com.termux/files/usr/etc/resolv.conf ~/proot-fs/etc/resolv.conf && cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/'"</code></pre>
+adb shell "run-as com.termux sh -c 'mkdir -p ~/proot-fs/etc/ssl && cp /data/data/com.termux/files/usr/etc/resolv.conf /data/local/tmp/resolv.conf && cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/'"</code></pre>
       </div>
       <div class="method-content method-phone">
 <pre><code>cd ~
@@ -423,7 +423,7 @@ cd pocket-wechat-bot
 
 # 准备 proot DNS 和 SSL 证书
 mkdir -p ~/proot-fs/etc/ssl
-cp /data/data/com.termux/files/usr/etc/resolv.conf ~/proot-fs/etc/resolv.conf
+cp /data/data/com.termux/files/usr/etc/resolv.conf /data/local/tmp/resolv.conf
 cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/</code></pre>
       </div>
 
@@ -434,11 +434,11 @@ cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/</code></pre>
         <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 验证</button>
       </div>
       <div class="method-content method-adb show">
-<pre><code>adb shell "run-as com.termux sh -c 'ls ~/pocket-wechat-bot/CLAUDE.md ~/proot-fs/etc/resolv.conf ~/proot-fs/etc/ssl/'"</code></pre>
+<pre><code>adb shell "run-as com.termux sh -c 'ls ~/pocket-wechat-bot/CLAUDE.md /data/local/tmp/resolv.conf ~/proot-fs/etc/ssl/'"</code></pre>
       </div>
       <div class="method-content method-phone">
 <pre><code>ls CLAUDE.md claude-fast.js              # 确认在仓库目录内
-ls ~/proot-fs/etc/resolv.conf             # DNS 配置
+ls /data/local/tmp/resolv.conf             # DNS 配置
 ls ~/proot-fs/etc/ssl/                    # TLS 证书目录</code></pre>
       </div>
     </div>
@@ -575,7 +575,7 @@ token = "&lt;YOUR_BOT_TOKEN&gt;"                    # 第 5 步扫码获取的</
 <pre><code>ls ~/cc-connect/CLAUDE.md                  # 人设文件（700+ 行）
 ls ~/.cc-connect/config.toml               # 配置文件
 ls ~/.claude/skills/nene/SKILL.md          # 人格 Skill
-wc -l ~/cc-connect/CLAUDE.md               # 应显示 400+ 行</code></pre>
+wc -l ~/cc-connect/CLAUDE.md               # 应显示 700+ 行</code></pre>
       </div>
     </div>
   </div>
@@ -919,8 +919,8 @@ adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"
     <div style="padding-left:40px"><span class="dir">│   └── skills/</span></div>
     <div style="padding-left:20px"><span class="dir">├── proot-fs/</span></div>
     <div style="padding-left:40px"><span class="dir">│   └── etc/</span></div>
-    <div style="padding-left:60px"><span class="file">│       ├── resolv.conf</span>      <span class="comment">← DNS</span></div>
     <div style="padding-left:60px"><span class="dir">│       └── ssl/</span>             <span class="comment">← TLS 证书</span></div>
+    <div style="padding-left:20px"><span class="file">├── resolv.conf</span>              <span class="comment">← DNS（/data/local/tmp/，脚本自动管理）</span></div>
     <div style="padding-left:20px"><span class="dir">├── .claude/</span></div>
     <div style="padding-left:40px"><span class="dir">│   └── skills/</span></div>
     <div style="padding-left:60px"><span class="dir">│       └── nene/</span>            <span class="comment">← 人格数据</span></div>

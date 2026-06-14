@@ -74,22 +74,137 @@ ls CLAUDE.md claude-fast.js
 ```bash
 # proot 需要 DNS 和 SSL 证书，从 Termux 复制
 mkdir -p ~/proot-fs/etc/ssl
-cp /data/data/com.termux/files/usr/etc/resolv.conf ~/proot-fs/etc/resolv.conf
+cp /data/data/com.termux/files/usr/etc/resolv.conf /data/local/tmp/resolv.conf
 cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/
-# 验证: ls ~/proot-fs/etc/resolv.conf ~/proot-fs/etc/ssl/
+# DNS 文件写到 /data/local/tmp/，start-bot.sh 自动管理
+# 验证: cat /data/local/tmp/resolv.conf && ls ~/proot-fs/etc/ssl/
 ```
 
-## 6. 获取微信 token
+## 6. 配置 cc-connect
+
+> 💡 **推荐**：直接从克隆的仓库复制模板：`cp config/config.toml.template ~/.cc-connect/config.toml`
+>
+> 然后编辑填入你的凭据。先填 API Key、项目名等，token 和 account_id 在下一步获取后再填入。以下为完整模板供参考：
+
+```bash
+mkdir -p ~/.cc-connect
+# 创建配置目录
+
+nano ~/.cc-connect/config.toml
+# 编辑配置，把下面内容贴进去
+# 注意：改掉所有 <...> 占位符！先填 API Key，token 和 account_id 在下一步获取
+```
+
+```toml
+# ============================================================
+# pocket-wechat-bot · cc-connect 配置文件模板
+# 复制此文件为 ~/.cc-connect/config.toml 并填入你的信息
+# ============================================================
+
+data_dir = ""
+attachment_send = ""
+language = "zh"
+idle_timeout_mins = 120
+
+# ---- 项目定义 ----
+[[projects]]
+  name = "nene"                          # 项目名，可自定义
+  show_context_indicator = false
+  reply_footer = false
+  inject_sender = false
+  admin_from = "<YOUR_WECHAT_OPENID>@im.wechat"  # ← 你的微信 OpenID
+
+  # ---- Agent 配置 ----
+  [projects.agent]
+    type = "claudecode"
+
+    [projects.agent.options]
+      allowed_tools = ["Read", "Grep", "Glob", "Write", "Edit"]
+      mode = "acceptEdits"
+      quiet = true
+      work_dir = "/data/data/com.termux/files/home/cc-connect"
+
+  # ---- AI 提供商 ----
+  provider = "deepseek"
+
+    [[projects.agent.providers]]
+      name = "deepseek"
+      api_key = "<YOUR_DEEPSEEK_API_KEY>"     # ← 你的 DeepSeek API Key
+      base_url = "https://api.deepseek.com/v1"
+      model = "deepseek-v4-pro"               # 或 deepseek-chat
+
+  # ---- 微信平台 ----
+  [[projects.platforms]]
+    type = "weixin"
+
+    [projects.platforms.options]
+      account_id = "<YOUR_BOT_ACCOUNT_ID>"    # ← 你的微信 Bot 账号 ID
+      allow_from = "*"
+      base_url = "https://ilinkai.weixin.qq.com"
+      token = "<YOUR_BOT_TOKEN>"              # ← 你的微信 Bot Token
+
+# ---- 日志 ----
+[log]
+  level = "info"
+
+# ---- 语音（可选）----
+[speech]
+  enabled = false
+  provider = ""
+
+# ---- 显示设置 ----
+[display]
+  thinking_messages = false
+  thinking_max_len = 300
+  tool_max_len = 500
+  tool_messages = false
+
+[stream_preview]
+  enabled = true
+  interval_ms = 600
+
+# ---- 频率限制 ----
+[rate_limit]
+  max_messages = 20
+  window_secs = 60
+
+# ---- 管理面板 ----
+[management]
+  enabled = true
+  port = 9820
+  token = "<YOUR_MGMT_TOKEN>"               # ← 管理面板访问令牌（可随机生成）
+  cors_origins = ["*"]
+
+[bridge]
+  enabled = true
+  port = 9810
+  token = "<YOUR_BRIDGE_TOKEN>"             # ← Bridge 令牌（可随机生成）
+  cors_origins = ["*"]
+
+# ---- 定时任务（可选）----
+[cron]
+  session_mode = ""
+
+# ---- Webhook（可选）----
+[webhook]
+  port = 0
+```
+
+
+## 7. 获取微信 token
 
 ```bash
 # --project 参数对应 config.toml 里 [[projects]].name，这里是示例，按你的实际项目名改
 ~/bin/cc-connect weixin setup --project nene
-# 弹出二维码（若未显示图片则点击终端里的链接），微信扫码后终端打印 token 和 account_id，记下来
+# 弹出二维码（若未显示图片则点击终端里的链接），微信扫码后终端打印 token 和 account_id
+# 把 token 和 account_id 填入 ~/.cc-connect/config.toml 对应位置
 ```
 
-> ✅ 验证：确认终端打印了 `token: wx_...` 和 `account_id: ...@im.wechat` 两行。
+> ✅ 验证：确认终端打印了 `token: wx_...` 和 `account_id: ...@im.wechat` 两行。回到 config.toml 填入这两个值。
+>
+> 💡 配置文件完整模板在 `config/config.toml.template`，上面第 6 步已经复制并编辑过了。如果还没配置，先回到第 6 步。
 
-## 7. 创建 claude-fast.js
+## 8. 创建 claude-fast.js
 
 > 💡 **推荐**：直接从克隆的仓库复制，无需手动输入：`cp claude-fast.js ~/bin/`
 >
@@ -114,7 +229,7 @@ const readline = require('readline');
 
 const API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.deepseek.com/v1';
-const MODEL = 'deepseek-v4-pro';
+const MODEL = process.env.MODEL || 'deepseek-v4-pro';
 const HOME = process.env.HOME || '/data/data/com.termux/files/home';
 const WORK_DIR = HOME + '/cc-connect';
 const MAX_TOOL_ROUNDS = 5;
@@ -570,7 +685,7 @@ node -c ~/bin/claude-fast.js
 # 语法检查，无输出 = 无错误
 ```
 
-## 8. 替换 /usr/bin/claude
+## 9. 替换 /usr/bin/claude
 
 ```bash
 cat > /data/data/com.termux/files/usr/bin/claude << 'EOF'
@@ -590,7 +705,7 @@ cat /data/data/com.termux/files/usr/bin/claude
 # 确认内容是包装器脚本（应显示 exec /usr/bin/node ...）
 ```
 
-## 9. 创建工作目录和人设文件
+## 10. 创建工作目录和人设文件
 
 ```bash
 # 创建目录
@@ -600,133 +715,26 @@ mkdir -p ~/cc-connect ~/.claude/skills
 cp CLAUDE.md ~/cc-connect/CLAUDE.md
 cp -r skills/nene ~/.claude/skills/
 
+# 编辑 CLAUDE.md，替换 <YOUR_WECHAT_OPENID> 为你的微信 OpenID
+# OpenID 可通过微信里给 bot 发 /whoami 获取
+nano ~/cc-connect/CLAUDE.md
+
 # 验证
 ls -la ~/cc-connect/CLAUDE.md
 # 确认文件存在
 
 wc -l ~/cc-connect/CLAUDE.md
-# 确认有内容（完整版应显示 400+ 行）
+# 确认有内容（完整版应显示 700+ 行）
 
 ls ~/.claude/skills/nene/SKILL.md
 # 确认人格文件已复制
 ```
 
-> 💡 仓库的 `CLAUDE.md` 包含完整的人格切换协议、信任阶梯和宁宁人格定义（400+ 行），远比下面的精简模板强大。如果你用的是自己创作的角色，替换 `skills/nene/` 为你的人格目录即可。
-
-## 10. 配置 cc-connect
-
-> 💡 **推荐**：直接从克隆的仓库复制模板：`cp config/config.toml.template ~/.cc-connect/config.toml`
+> 💡 仓库的 `CLAUDE.md` 包含完整的人格切换协议、信任阶梯和宁宁人格定义（700+ 行）。如果你用的是自己创作的角色，替换 `skills/nene/` 为你的人格目录即可。
 >
-> 然后编辑填入你的凭据。以下为完整模板供参考：
-
-```bash
-mkdir -p ~/.cc-connect
-# 创建配置目录
-
-nano ~/.cc-connect/config.toml
-# 编辑配置，把下面内容贴进去
-# 注意：改掉所有 <...> 占位符！
-```
-
-```toml
-# ============================================================
-# pocket-wechat-bot · cc-connect 配置文件模板
-# 复制此文件为 ~/.cc-connect/config.toml 并填入你的信息
-# ============================================================
-
-data_dir = ""
-attachment_send = ""
-language = "zh"
-idle_timeout_mins = 120
-
-# ---- 项目定义 ----
-[[projects]]
-  name = "nene"                          # 项目名，可自定义
-  show_context_indicator = false
-  reply_footer = false
-  inject_sender = false
-  admin_from = "<YOUR_WECHAT_OPENID>@im.wechat"  # ← 你的微信 OpenID
-
-  # ---- Agent 配置 ----
-  [projects.agent]
-    type = "claudecode"
-
-    [projects.agent.options]
-      allowed_tools = ["Read", "Grep", "Glob", "Write", "Edit"]
-      mode = "acceptEdits"
-      quiet = true
-      work_dir = "/data/data/com.termux/files/home/cc-connect"
-
-  # ---- AI 提供商 ----
-  provider = "deepseek"
-
-    [[projects.agent.providers]]
-      name = "deepseek"
-      api_key = "<YOUR_DEEPSEEK_API_KEY>"     # ← 你的 DeepSeek API Key
-      base_url = "https://api.deepseek.com/v1"
-      model = "deepseek-v4-pro"               # 或 deepseek-chat
-
-  # ---- 微信平台 ----
-  [[projects.platforms]]
-    type = "weixin"
-
-    [projects.platforms.options]
-      account_id = "<YOUR_BOT_ACCOUNT_ID>"    # ← 你的微信 Bot 账号 ID
-      allow_from = "*"
-      base_url = "https://ilinkai.weixin.qq.com"
-      token = "<YOUR_BOT_TOKEN>"              # ← 你的微信 Bot Token
-
-# ---- 日志 ----
-[log]
-  level = "info"
-
-# ---- 语音（可选）----
-[speech]
-  enabled = false
-  provider = ""
-
-# ---- 显示设置 ----
-[display]
-  thinking_messages = false
-  thinking_max_len = 300
-  tool_max_len = 500
-  tool_messages = false
-
-[stream_preview]
-  enabled = true
-  interval_ms = 600
-
-# ---- 频率限制 ----
-[rate_limit]
-  max_messages = 20
-  window_secs = 60
-
-# ---- 管理面板 ----
-[management]
-  enabled = true
-  port = 9820
-  token = "<YOUR_MGMT_TOKEN>"               # ← 管理面板访问令牌（可随机生成）
-  cors_origins = ["*"]
-
-[bridge]
-  enabled = true
-  port = 9810
-  token = "<YOUR_BRIDGE_TOKEN>"             # ← Bridge 令牌（可随机生成）
-  cors_origins = ["*"]
-
-# ---- 定时任务（可选）----
-[cron]
-  session_mode = ""
-
-# ---- Webhook（可选）----
-[webhook]
-  port = 0
-```
-
-```bash
-ls -la ~/.cc-connect/config.toml
-# 确认配置文件存在
-```
+> 另外，仓库 `scripts/` 目录下还有两个可选模板：
+> - `termux-bashrc` — Termux 的 .bashrc 模板，含 `cc-connect` 快捷 alias（自动处理 DNS/SSL）
+> - `termux-resolv.conf` — DNS 配置模板，在 `start-bot.sh` 未自动生成时手动使用
 
 ## 11. 创建启动脚本
 
@@ -750,6 +758,20 @@ if [ -z "$ANTHROPIC_API_KEY" ]; then
   exit 1
 fi
 
+# DNS 修复：Android 不走 /etc/resolv.conf，Go 二进制需要它
+RESOLV_CONF="/data/local/tmp/resolv.conf"
+if [ ! -f "$RESOLV_CONF" ]; then
+    echo "[*] 写入 DNS 配置到 $RESOLV_CONF ..."
+    echo "nameserver 114.114.114.114" > "$RESOLV_CONF"
+    echo "nameserver 223.5.5.5" >> "$RESOLV_CONF"
+fi
+
+# 防止 Android 杀后台
+if command -v termux-wake-lock > /dev/null 2>&1; then
+    termux-wake-lock 2>/dev/null
+    echo "[*] wake-lock 已激活"
+fi
+
 echo ""
 echo "  =============================="
 echo "    nene - cc-connect 微信机器人"
@@ -762,7 +784,7 @@ LOCK="$HOME/.cc-connect/.config.toml.lock"
 if [ -f "$LOCK" ]; then
     echo "[!] 已有实例在运行，先停止..."
     proot \
-      -b $HOME/proot-fs/etc/resolv.conf:/etc/resolv.conf \
+      -b /data/local/tmp/resolv.conf:/etc/resolv.conf \
       -b $HOME/proot-fs/etc/ssl:/etc/ssl \
       -b /data/data/com.termux/files/usr:/usr \
       -b $HOME:/home \
@@ -779,7 +801,7 @@ echo "[*] 启动中..."
 
 SSL_CERT_FILE=/data/data/com.termux/files/usr/etc/tls/cert.pem \
 proot \
-  -b $HOME/proot-fs/etc/resolv.conf:/etc/resolv.conf \
+  -b /data/local/tmp/resolv.conf:/etc/resolv.conf \
   -b $HOME/proot-fs/etc/ssl:/etc/ssl \
   -b /data/data/com.termux/files/usr:/usr \
   -b $HOME:/home \
@@ -909,8 +931,9 @@ scripts\push-config.bat
 │   └── skills/
 ├── proot-fs/
 │   └── etc/
-│       ├── resolv.conf      ← DNS 配置（从 Termux 复制）
 │       └── ssl/             ← TLS 证书（从 Termux 复制）
+├── /data/local/tmp/
+│   └── resolv.conf          ← DNS 配置（start-bot.sh 自动管理）
 ├── start-nene.sh            ← 启动脚本
 ├── .claude/
 │   └── skills/
