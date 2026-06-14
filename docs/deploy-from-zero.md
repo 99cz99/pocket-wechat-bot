@@ -20,12 +20,14 @@
 pkg update && pkg upgrade -y
 # 更新包列表并升级所有包
 
-pkg install nodejs git curl proot termux-api -y
-# nodejs     = 跑 claude-fast.js 脚本
-# git        = 拉代码
-# curl       = 下载文件
-# proot      = Linux 环境隔离（cc-connect 需要）
-# termux-api = 防杀后台（termux-wake-lock）
+pkg install nodejs git curl proot termux-api ca-certificates tmux -y
+# nodejs          = 跑 claude-fast.js 脚本
+# git             = 拉代码
+# curl            = 下载文件
+# proot           = Linux 环境隔离（cc-connect 需要）
+# termux-api      = 防杀后台（termux-wake-lock）
+# ca-certificates = TLS/SSL 证书（HTTPS 连接必需！）
+# tmux            = 后台常驻（关闭 Termux 窗口进程不中断）
 
 node --version
 # 确认 Node.js 装好了，应显示 v20+
@@ -77,6 +79,7 @@ mkdir -p ~/proot-fs/etc/ssl
 cp /data/data/com.termux/files/usr/etc/resolv.conf /data/local/tmp/resolv.conf
 cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/
 # DNS 文件写到 /data/local/tmp/，start-bot.sh 自动管理
+# 如果 cp 报 Permission denied 不用管——启动脚本会自动创建
 # 验证: cat /data/local/tmp/resolv.conf && ls ~/proot-fs/etc/ssl/
 ```
 
@@ -262,7 +265,7 @@ try {
         '<!-- SESSION_MEMORY_UPDATE_RULE -->',
         '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `.claude/skills/nene/references/affinity.json`。',
         '需要更新的字段：',
-        '- `last_session`: 改为今天的日期（格式 YYYY-MM-DD，如 "2026-06-13"）',
+        '- `last_session`: 改为今天的日期（格式 YYYYY-MM-DD，如 "2026-06-13"）',
         '- `notes`: 用一两句话记录本轮对话中最值得记住的内容。如果对话很短或只是闲聊，写一句简短概括即可，不要留空。',
         '- `trust_value`: 如果信任有变化则更新数字，无变化则保持不变',
         '- `trust_level`: 如果跨越了层级边界则更新，否则保持不变',
@@ -735,6 +738,8 @@ ls ~/.claude/skills/nene/SKILL.md
 > 另外，仓库 `scripts/` 目录下还有两个可选模板：
 > - `termux-bashrc` — Termux 的 .bashrc 模板，含 `cc-connect` 快捷 alias（自动处理 DNS/SSL）
 > - `termux-resolv.conf` — DNS 配置模板，在 `start-bot.sh` 未自动生成时手动使用
+>
+> 💡 仓库里还有一个 `config/affinity.json.template` 文件——这是信任度数据的初始模板。**不需要手动复制**，`claude-fast.js` 会在首次运行时自动创建 `~/.claude/skills/nene/references/affinity.json`。
 
 ## 11. 创建启动脚本
 
@@ -758,12 +763,25 @@ if [ -z "$ANTHROPIC_API_KEY" ]; then
   exit 1
 fi
 
+# 检查 proot SSL 证书目录
+if [ ! -d "$HOME/proot-fs/etc/ssl" ] || [ -z "$(ls -A "$HOME/proot-fs/etc/ssl" 2>/dev/null)" ]; then
+    echo "[!] proot SSL 证书目录不存在或为空: $HOME/proot-fs/etc/ssl"
+    echo "    请先运行: mkdir -p ~/proot-fs/etc/ssl && cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/"
+    echo "    如果 tls/ 目录也不存在，请安装 ca-certificates: pkg install ca-certificates -y"
+    exit 1
+fi
+
 # DNS 修复：Android 不走 /etc/resolv.conf，Go 二进制需要它
 RESOLV_CONF="/data/local/tmp/resolv.conf"
 if [ ! -f "$RESOLV_CONF" ]; then
     echo "[*] 写入 DNS 配置到 $RESOLV_CONF ..."
-    echo "nameserver 114.114.114.114" > "$RESOLV_CONF"
+    echo "nameserver 114.114.114.114" > "$RESOLV_CONF" 2>/dev/null || {
+        echo "[!] 无法写入 $RESOLV_CONF（Android 11+ 权限限制）"
+        echo "    请在 Termux 里手动执行: echo 'nameserver 114.114.114.114' > /data/local/tmp/resolv.conf"
+        exit 1
+    }
     echo "nameserver 223.5.5.5" >> "$RESOLV_CONF"
+    # 海外用户可将以上 DNS 替换为 8.8.8.8 / 1.1.1.1
 fi
 
 # 防止 Android 杀后台
@@ -793,7 +811,14 @@ if [ -f "$LOCK" ]; then
       -b /proc:/proc \
       /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" PATH=/usr/bin:/usr/local/bin:/home/bin \
       $HOME/bin/cc-connect --config "$CONFIG" --force 2>/dev/null
-    rm -f "$LOCK"
+    if [ $? -eq 0 ]; then
+        rm -f "$LOCK"
+        echo "[*] 旧实例已停止"
+    else
+        echo "[!] 无法停止旧实例，请手动检查: pgrep -f cc-connect"
+        echo "    如果旧实例已不存在，手动删除锁文件: rm -f $LOCK"
+        exit 1
+    fi
     sleep 1
 fi
 
@@ -812,8 +837,18 @@ proot \
   $HOME/bin/cc-connect --config "$CONFIG" &
 
 sleep 2
-echo "[*] 管理面板: http://127.0.0.1:9820"
-echo "[*] 已启动~"
+
+# 健康检查
+if pgrep -f cc-connect > /dev/null 2>&1; then
+    echo "[*] cc-connect 进程已启动 (PID: $(pgrep -f cc-connect | head -1))"
+    echo "[*] 管理面板: http://127.0.0.1:9820"
+    echo "[*] 已启动~"
+else
+    echo "[!] 警告：cc-connect 进程未检测到！可能启动失败。"
+    echo "    检查日志: cat ~/cc-connect/bot-debug.log"
+    echo "    检查配置: cat ~/.cc-connect/config.toml"
+    echo "    手动前台运行测试: cd ~ && SSL_CERT_FILE=... proot ... ~/bin/cc-connect --config ~/.cc-connect/config.toml"
+fi
 ```
 
 ```bash
@@ -830,9 +865,6 @@ bash -n ~/start-nene.sh
 ## 12. 启动并后台常驻
 
 ```bash
-# 安装 tmux（终端复用器，关闭 Termux 进程不中断）
-pkg install tmux -y
-
 # 创建 tmux 会话并启动
 tmux new -s nene
 bash ~/start-nene.sh

@@ -44,7 +44,7 @@ try {
         '<!-- SESSION_MEMORY_UPDATE_RULE -->',
         '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `.claude/skills/nene/references/affinity.json`。',
         '需要更新的字段：',
-        '- `last_session`: 改为今天的日期（格式 YYYY-MM-DD，如 "2026-06-13"）',
+        '- `last_session`: 改为今天的日期（格式 YYYYY-MM-DD，如 "2026-06-13"）',
         '- `notes`: 用一两句话记录本轮对话中最值得记住的内容。如果对话很短或只是闲聊，写一句简短概括即可，不要留空。',
         '- `trust_value`: 如果信任有变化则更新数字，无变化则保持不变',
         '- `trust_level`: 如果跨越了层级边界则更新，否则保持不变',
@@ -154,7 +154,7 @@ function executeTool(name, args) {
     const filePath = args.file_path || args.path || '';
     // 安全检查：限制在 HOME 目录内
     const resolved = path.resolve(filePath.startsWith(HOME) ? filePath : path.join(HOME, filePath));
-    if (!resolved.startsWith(HOME) && !resolved.startsWith('/data/data/com.termux/files/home')) {
+    if (!resolved.startsWith(HOME)) {
       return '错误：只允许访问 HOME 目录下的文件';
     }
 
@@ -368,7 +368,7 @@ function callAPISimple(history, callback) {
         updateAffinityAuto();
         callback(null, text);
       } catch (e) {
-        callback(null, '');
+        callback(null, '（解析失败: ' + e.message + '）');
       }
     });
   });

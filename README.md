@@ -52,7 +52,7 @@ https://github.com/99cz99/pocket-wechat-bot.git
 
 ```bash
 pkg update && pkg upgrade -y
-pkg install proot nodejs git curl termux-api -y
+pkg install proot nodejs git curl termux-api ca-certificates tmux -y
 # 验证: node --version（应 v20+）、git --version、which proot
 ```
 
@@ -92,20 +92,12 @@ mkdir -p ~/cc-connect ~/.cc-connect ~/.claude/skills
 # 配置文件
 cp config/config.toml.template ~/.cc-connect/config.toml
 nano ~/.cc-connect/config.toml      # 填入 API Key 和微信凭据
+# ⚠️ token 和 account_id 先留空！下一步获取微信 token 后再回来填
 
 # 设置 API Key 环境变量（写入 bashrc 持久化）
 echo 'export ANTHROPIC_API_KEY=sk-你的key' >> ~/.bashrc
 source ~/.bashrc
-
-# 人格文件和系统提示词
-cp -r skills/nene ~/.claude/skills/
-cp CLAUDE.md ~/cc-connect/CLAUDE.md
-# 编辑 CLAUDE.md，替换 <YOUR_WECHAT_OPENID> 为你的微信 OpenID（通过 /whoami 获取）
-nano ~/cc-connect/CLAUDE.md
-
-# 启动脚本
-cp scripts/start-bot.sh ~/start-nene.sh
-# 验证: ls ~/cc-connect/CLAUDE.md ~/.cc-connect/config.toml ~/start-nene.sh
+# ⚠️ 虽然变量名是 ANTHROPIC_API_KEY，但请填 DeepSeek API Key！
 ```
 
 ### 6. 获取微信凭据
@@ -119,7 +111,22 @@ cp scripts/start-bot.sh ~/start-nene.sh
 
 > 💡 如果终端没有直接显示二维码，而是显示了一个链接——点击那个链接，在浏览器里打开二维码。
 
-### 7. 创建 claude 包装器
+### 7. 部署人格文件
+
+```bash
+# 人格文件和系统提示词
+cp -r skills/nene ~/.claude/skills/
+cp CLAUDE.md ~/cc-connect/CLAUDE.md
+
+# ⚠️ 必须编辑！替换 <YOUR_WECHAT_OPENID> 为你的微信 OpenID（通过 /whoami 获取）
+nano ~/cc-connect/CLAUDE.md
+
+# 启动脚本
+cp scripts/start-bot.sh ~/start-nene.sh
+# 验证: ls ~/cc-connect/CLAUDE.md ~/.cc-connect/config.toml ~/start-nene.sh
+```
+
+### 8. 创建 claude 包装器
 
 cc-connect 通过调用 `/usr/bin/claude` 来启动 AI 进程：
 
@@ -136,12 +143,9 @@ cp claude-fast.js ~/bin/claude-fast.js
 # 验证: node -c ~/bin/claude-fast.js（无输出=语法正确）
 ```
 
-### 8. 启动并保持后台
+### 9. 启动并保持后台
 
 ```bash
-# 安装 tmux（终端复用器，关闭 Termux 进程不中断）
-pkg install tmux -y
-
 # 创建 tmux 会话并启动
 tmux new -s nene
 bash ~/start-nene.sh

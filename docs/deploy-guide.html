@@ -331,17 +331,18 @@ function switchMethod(block, method) {
       </div>
       <div class="method-content method-adb show">
 <pre><code>adb shell "run-as com.termux sh -c 'pkg update && pkg upgrade -y'"
-adb shell "run-as com.termux sh -c 'pkg install nodejs git curl proot tmux termux-api -y'"</code></pre>
+adb shell "run-as com.termux sh -c 'pkg install nodejs git curl proot tmux termux-api ca-certificates -y'"</code></pre>
       </div>
       <div class="method-content method-phone">
 <pre><code>pkg update && pkg upgrade -y
-pkg install nodejs git curl proot tmux termux-api -y</code></pre>
+pkg install nodejs git curl proot tmux termux-api ca-certificates -y</code></pre>
       </div>
 
       <div class="alert alert-tip"><span class="alert-icon">💡</span><div>
         <strong>各包作用：</strong><br>
         <code>nodejs</code> — 运行 AI 脚本 &nbsp; <code>git</code> — 克隆仓库 &nbsp; <code>curl</code> — 下载文件<br>
-        <code>proot</code> — Linux 环境隔离 &nbsp; <code>tmux</code> — 后台常驻 &nbsp; <code>termux-api</code> — 防杀后台
+        <code>proot</code> — Linux 环境隔离 &nbsp; <code>tmux</code> — 后台常驻 &nbsp; <code>termux-api</code> — 防杀后台<br>
+        <code>ca-certificates</code> — TLS 证书（⚠️ 必须！缺失则 HTTPS 全挂）
       </div></div>
 
       <div class="method-bar">
@@ -562,6 +563,8 @@ api_key = "&lt;YOUR_DEEPSEEK_API_KEY&gt;"           # DeepSeek API Key
 account_id = "&lt;YOUR_BOT_ACCOUNT_ID&gt;"          # 第 5 步扫码获取的
 token = "&lt;YOUR_BOT_TOKEN&gt;"                    # 第 5 步扫码获取的</code></pre>
 
+      <div class="alert alert-warn"><span class="alert-icon">⚠️</span><div><strong>别忘了 CLAUDE.md！</strong>文件里也有 <code>&lt;YOUR_WECHAT_OPENID&gt;</code> 占位符需要替换。在手机 Termux 里执行：<code>nano ~/cc-connect/CLAUDE.md</code>，搜索 <code>YOUR_WECHAT</code> 替换为你的微信 OpenID。不替换的话 admin 身份识别不生效，人格切换功能无法使用。</div></div>
+
       <div class="alert alert-tip"><span class="alert-icon">🎭</span><div><strong>CLAUDE.md 改完无需重启</strong>，下一轮对话自动生效。人格系统包含六层信任阶梯、福利事件、人格切换协议，详见仓库 <a href="https://github.com/99cz99/pocket-wechat-bot" style="color:#a0d0a0">README</a>。</div></div>
 
       <div class="method-bar">
@@ -679,11 +682,11 @@ tmux ls                 # 应显示 nene: 1 windows...</code></pre>
         <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
       </div>
       <div class="method-content method-adb show">
-<pre><code>adb shell "run-as com.termux sh -c 'pkill -f cc-connect && termux-wake-lock release'"</code></pre>
+<pre><code>adb shell "run-as com.termux sh -c 'pkill -f cc-connect && termux-wake-lock -r'"</code></pre>
       </div>
       <div class="method-content method-phone">
 <pre><code>pkill -f cc-connect
-termux-wake-lock release</code></pre>
+termux-wake-lock -r</code></pre>
       </div>
 
       <div class="alert alert-info"><span class="alert-icon">💡</span><div>如果看到 <code>terminated with signal 9</code> 别慌——那是脚本自动杀了旧进程，紧接着会启新的。</div></div>
@@ -853,7 +856,7 @@ adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"
     <div><span style="color:#c8c8d4">adb shell "cat /sdcard/Download/claude-fast.js | run-as com.termux sh -c 'cat > ~/bin/claude-fast.js && chmod +x ~/bin/claude-fast.js'"</span></div>
     <br>
     <div style="color:#9090b0;margin-bottom:6px"># 停止</div>
-    <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'pkill -f cc-connect && termux-wake-lock release'"</span></div>
+    <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'pkill -f cc-connect && termux-wake-lock -r'"</span></div>
     <br>
     <div style="color:#9090b0;margin-bottom:6px"># 无线 ADB（不想插线）</div>
     <div><span style="color:#c8c8d4">adb tcpip 5555</span></div>
