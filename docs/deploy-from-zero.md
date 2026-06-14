@@ -61,6 +61,7 @@ ls -la ~/bin/cc-connect
 ## 4. 获取微信 token
 
 ```bash
+# --project 参数对应 config.toml 里 [[projects]].name，这里是示例，按你的实际项目名改
 ~/bin/cc-connect weixin setup --project nene
 # 弹出二维码（若未显示图片则点击终端里的链接），微信扫码后终端打印 token 和 account_id，记下来
 ```

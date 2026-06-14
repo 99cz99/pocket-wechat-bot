@@ -400,6 +400,7 @@ chmod +x ~/bin/cc-connect</code></pre>
     </div>
     <div class="step-body">
       <p>这一步<strong>必须在手机 Termux 里操作</strong>（要显示二维码）。打开 Termux：</p>
+	      <p><code>--project</code> 参数对应 config.toml 里 <code>[[projects]].name</code>，这里 nene 是示例，按你的项目名改。</p>
 <pre><code>~/bin/cc-connect weixin setup --project nene</code></pre>
       <p>用<strong>机器人专用的微信号</strong>扫终端里的二维码。成功后打印：</p>
 	      <div class="alert alert-tip"><span class="alert-icon">💡</span><div>如果终端没有直接显示二维码，而是显示了一个链接——点击那个链接，在浏览器里打开二维码。</div></div>
@@ -1025,7 +1026,7 @@ termux-wake-lock release</code></pre>
     </div>
     <div class="step-body">
       <p>微信扫码获取的 token 不是永久的，可能几天或几周后失效。表现为消息发出去没有回复，日志里可能看到平台断开。</p>
-      <p><strong>应对：</strong>重新执行 <code>~/bin/cc-connect weixin setup --project nene</code> 扫码，然后把新的 token 和 account_id 更新到 config.toml，重启 bot。</p>
+      <p><strong>应对：</strong>重新执行 <code>~/bin/cc-connect weixin setup --project 你的项目名</code> 扫码（项目名对应 config.toml 里 <code>[[projects]].name</code>），然后把新的 token 和 account_id 更新到 config.toml，重启 bot。</p>
     </div>
   </div>
 

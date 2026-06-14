@@ -97,6 +97,7 @@ cp CLAUDE.md ~/cc-connect/CLAUDE.md
 
 ```bash
 # 扫码获取 token 和 account_id
+# --project 参数对应 config.toml 里 [[projects]].name，这里是示例，按你的实际项目名改
 ~/bin/cc-connect weixin setup --project nene
 # 把输出的 token 和 account_id 填入 ~/.cc-connect/config.toml
 ```
