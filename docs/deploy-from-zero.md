@@ -20,11 +20,12 @@
 pkg update && pkg upgrade -y
 # 更新包列表并升级所有包
 
-pkg install nodejs git curl proot -y
-# nodejs = 跑 claude-fast.js 脚本
-# git    = 拉代码
-# curl   = 下载文件
-# proot  = Linux 环境隔离（cc-connect 需要）
+pkg install nodejs git curl proot termux-api -y
+# nodejs     = 跑 claude-fast.js 脚本
+# git        = 拉代码
+# curl       = 下载文件
+# proot      = Linux 环境隔离（cc-connect 需要）
+# termux-api = 防杀后台（termux-wake-lock）
 
 node --version
 # 确认 Node.js 装好了，应显示 v20+
@@ -68,7 +69,17 @@ cd pocket-wechat-bot
 ls CLAUDE.md claude-fast.js
 ```
 
-## 5. 获取微信 token
+## 5. 准备 proot 环境
+
+```bash
+# proot 需要 DNS 和 SSL 证书，从 Termux 复制
+mkdir -p ~/proot-fs/etc/ssl
+cp /data/data/com.termux/files/usr/etc/resolv.conf ~/proot-fs/etc/resolv.conf
+cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/
+# 验证: ls ~/proot-fs/etc/resolv.conf ~/proot-fs/etc/ssl/
+```
+
+## 6. 获取微信 token
 
 ```bash
 # --project 参数对应 config.toml 里 [[projects]].name，这里是示例，按你的实际项目名改
@@ -78,7 +89,7 @@ ls CLAUDE.md claude-fast.js
 
 > ✅ 验证：确认终端打印了 `token: wx_...` 和 `account_id: ...@im.wechat` 两行。
 
-## 6. 创建 claude-fast.js
+## 7. 创建 claude-fast.js
 
 > 💡 **推荐**：直接从克隆的仓库复制，无需手动输入：`cp claude-fast.js ~/bin/`
 >
@@ -559,7 +570,7 @@ node -c ~/bin/claude-fast.js
 # 语法检查，无输出 = 无错误
 ```
 
-## 7. 替换 /usr/bin/claude
+## 8. 替换 /usr/bin/claude
 
 ```bash
 cat > /data/data/com.termux/files/usr/bin/claude << 'EOF'
@@ -579,46 +590,30 @@ cat /data/data/com.termux/files/usr/bin/claude
 # 确认内容是包装器脚本（应显示 exec /usr/bin/node ...）
 ```
 
-## 8. 创建工作目录和 CLAUDE.md
+## 9. 创建工作目录和人设文件
 
 ```bash
-mkdir -p ~/cc-connect
-# 创建 cc-connect 工作目录
+# 创建目录
+mkdir -p ~/cc-connect ~/.claude/skills
 
-nano ~/cc-connect/CLAUDE.md
-# 编辑人设文件，把下面内容贴进去
-```
+# 从仓库复制完整人设文件
+cp CLAUDE.md ~/cc-connect/CLAUDE.md
+cp -r skills/nene ~/.claude/skills/
 
-CLAUDE.md 内容：
-
-```markdown
-# cc-connect 微信机器人规则
-
-## 底线：回复中绝对不要出现
-- 思考和推理过程
-- 工具调用信息
-- 工作目录路径
-- 状态栏、进度条
-
-## 要求
-- 直接给结果，像普通聊天一样回复
-- 始终用简体中文
-
-## 当前人格
-你是绫地宁宁。温柔害羞，姬松学院二年级。
-被戳破心事时容易慌张（"啊哇哇"），极度害羞会黑化。
-对信任的人撒娇黏人。提到美食双眼放光。
-```
-
-```bash
+# 验证
 ls -la ~/cc-connect/CLAUDE.md
 # 确认文件存在
 
 wc -l ~/cc-connect/CLAUDE.md
-# 确认有内容（应显示 10+ 行）
+# 确认有内容（完整版应显示 400+ 行）
+
+ls ~/.claude/skills/nene/SKILL.md
+# 确认人格文件已复制
 ```
 
-## 9. 配置 cc-connect
+> 💡 仓库的 `CLAUDE.md` 包含完整的人格切换协议、信任阶梯和宁宁人格定义（400+ 行），远比下面的精简模板强大。如果你用的是自己创作的角色，替换 `skills/nene/` 为你的人格目录即可。
+
+## 10. 配置 cc-connect
 
 > 💡 **推荐**：直接从克隆的仓库复制模板：`cp config/config.toml.template ~/.cc-connect/config.toml`
 >
@@ -733,7 +728,7 @@ ls -la ~/.cc-connect/config.toml
 # 确认配置文件存在
 ```
 
-## 10. 创建启动脚本
+## 11. 创建启动脚本
 
 > 💡 **推荐**：直接从仓库复制：`cp scripts/start-bot.sh ~/start-nene.sh`
 >
@@ -810,7 +805,7 @@ bash -n ~/start-nene.sh
 # 语法检查，无输出 = 无错误
 ```
 
-## 11. 启动并后台常驻
+## 12. 启动并后台常驻
 
 ```bash
 # 安装 tmux（终端复用器，关闭 Termux 进程不中断）
@@ -832,7 +827,7 @@ pgrep -f cc-connect
 # 确认断开后进程还在跑（返回数字 = 在跑）
 ```
 
-## 12. 防止 Android 杀掉 Termux（重要）
+## 13. 防止 Android 杀掉 Termux（重要）
 
 Android 系统会主动杀后台进程省电。就算用了 tmux，Termux 本身被杀掉的话 bot 也会停。
 
@@ -857,7 +852,7 @@ Android 系统会主动杀后台进程省电。就算用了 tmux，Termux 本身
 
 > 💡 不同品牌手机的设置路径略有差异。华为/荣耀在「应用启动管理」、小米在「省电策略」、OPPO/一加在「耗电保护」、三星在「电池」→「后台使用限制」、vivo 在「后台高耗电」。
 
-## 13. PC 端管理配置（推荐）
+## 14. PC 端管理配置（推荐）
 
 日常改配置不用在手机上戳 nano。PC 上改完，一行命令推送：
 

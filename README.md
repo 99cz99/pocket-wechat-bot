@@ -51,8 +51,8 @@ https://github.com/99cz99/pocket-wechat-bot.git
 在 Android 手机上安装 [Termux](https://f-droid.org/packages/com.termux/)，然后：
 
 ```bash
-pkg update && pkg upgrade
-pkg install proot nodejs git curl -y
+pkg update && pkg upgrade -y
+pkg install proot nodejs git curl termux-api -y
 # 验证: node --version（应 v20+）、git --version、which proot
 ```
 
@@ -73,7 +73,16 @@ git clone https://github.com/99cz99/pocket-wechat-bot.git
 cd pocket-wechat-bot
 ```
 
-### 4. 配置
+### 4. 准备 proot 环境
+
+```bash
+# proot 需要 DNS 和 SSL 证书，从 Termux 复制
+mkdir -p ~/proot-fs/etc/ssl
+cp /data/data/com.termux/files/usr/etc/resolv.conf ~/proot-fs/etc/resolv.conf
+cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/
+```
+
+### 5. 配置
 
 ```bash
 # 创建工作目录
@@ -90,10 +99,13 @@ source ~/.bashrc
 # 人格文件和系统提示词
 cp -r skills/nene ~/.claude/skills/
 cp CLAUDE.md ~/cc-connect/CLAUDE.md
-# 验证: ls ~/cc-connect/CLAUDE.md ~/.cc-connect/config.toml
+
+# 启动脚本
+cp scripts/start-bot.sh ~/start-nene.sh
+# 验证: ls ~/cc-connect/CLAUDE.md ~/.cc-connect/config.toml ~/start-nene.sh
 ```
 
-### 5. 获取微信凭据
+### 6. 获取微信凭据
 
 ```bash
 # 扫码获取 token 和 account_id
@@ -104,7 +116,7 @@ cp CLAUDE.md ~/cc-connect/CLAUDE.md
 
 > 💡 如果终端没有直接显示二维码，而是显示了一个链接——点击那个链接，在浏览器里打开二维码。
 
-### 6. 创建 claude 包装器
+### 7. 创建 claude 包装器
 
 cc-connect 通过调用 `/usr/bin/claude` 来启动 AI 进程：
 
@@ -121,7 +133,7 @@ cp claude-fast.js ~/bin/claude-fast.js
 # 验证: node -c ~/bin/claude-fast.js（无输出=语法正确）
 ```
 
-### 7. 启动并保持后台
+### 8. 启动并保持后台
 
 ```bash
 # 安装 tmux（终端复用器，关闭 Termux 进程不中断）
