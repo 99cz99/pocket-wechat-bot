@@ -897,13 +897,23 @@ scripts\push-config.bat
 │   └── claude-fast.js       ← 核心：stdin→API→stdout
 ├── cc-connect/
 │   └── CLAUDE.md            ← 系统人设
+├── pocket-wechat-bot/       ← 克隆的仓库（日常 git pull 更新）
+│   ├── CLAUDE.md
+│   ├── claude-fast.js
+│   ├── config/
+│   ├── docs/
+│   ├── scripts/
+│   └── skills/
+├── proot-fs/
+│   └── etc/
+│       ├── resolv.conf      ← DNS 配置（从 Termux 复制）
+│       └── ssl/             ← TLS 证书（从 Termux 复制）
 ├── start-nene.sh            ← 启动脚本
+├── nene.log                 ← 运行日志（tmux 方式无此文件）
+├── .claude/
+│   └── skills/
+│       └── nene/            ← 人格数据（SKILL.md + affinity.json + 调研资料）
 └── .cc-connect/
     └── config.toml          ← 配置文件
 
 /usr/bin/claude → node ~/bin/claude-fast.js   ← 包装器
-
-PC 端（仓库）：
-├── config/config.toml        ← 在 PC 上编辑
-├── scripts/push-config.bat   ← 一键推送到手机
-```

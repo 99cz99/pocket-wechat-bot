@@ -141,7 +141,7 @@ pkg install tmux -y
 
 # 创建 tmux 会话并启动
 tmux new -s nene
-bash scripts/start-bot.sh
+bash ~/start-nene.sh
 
 # 看到 "cc-connect is running" 后
 # 按 Ctrl+B 然后 D → 断开 tmux，bot 继续跑

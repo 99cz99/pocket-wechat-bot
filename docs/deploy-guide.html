@@ -185,7 +185,7 @@
 
 <div class="hero">
   <h1>🤖 cc-connect 微信机器人</h1>
-  <p class="subtitle">Android 手机端部署指南 · 两种方式任选</p>
+  <p class="subtitle">Android 手机端部署指南 · 从克隆仓库到启动</p>
   <div class="badge-row">
     <span class="badge badge-android">📱 Android</span>
     <span class="badge badge-termux">💻 Termux</span>
@@ -210,7 +210,7 @@
     <div class="select-card select-card-phone" id="card-phone" onclick="selectGlobalMethod('phone')">
       <span class="check">✅</span>
       <h4 style="color:var(--phone-text);margin-bottom:8px">📱 纯手机操作</h4>
-      <p style="color:#9090b0;font-size:0.85em">所有命令在 Termux 终端里手打。<br>用 nano 编辑器创建文件，复制粘贴代码。</p>
+      <p style="color:#9090b0;font-size:0.85em">所有命令在 Termux 终端里手打。<br>用 nano 编辑器修改配置文件。</p>
       <p style="color:#a0d0a0;font-size:0.82em;margin-top:8px">✅ 适合：没电脑、不想折腾 ADB</p>
     </div>
   </div>
@@ -229,10 +229,10 @@
     <div class="arch-row">
       <div class="arch-box wechat">💬 微信消息</div><span class="arch-arrow">→</span>
       <div class="arch-box bridge">🔄 cc-connect<br><small>消息桥接</small></div><span class="arch-arrow">→</span>
-      <div class="arch-box ai">🧠 claude-fast.js<br><small>AI 脚本</small></div><span class="arch-arrow">→</span>
+      <div class="arch-box ai">🧠 claude-fast.js<br><small>AI 脚本 v8</small></div><span class="arch-arrow">→</span>
       <div class="arch-box api">☁️ DeepSeek API</div>
     </div>
-    <p style="margin-top:20px;color:#707088;font-size:0.85em">微信消息 → cc-connect 接收 → 转发给 claude-fast.js → 调用 AI → 返回回复 → cc-connect 发回微信</p>
+    <p style="margin-top:20px;color:#707088;font-size:0.85em">微信消息 → cc-connect 接收 → 转发给 claude-fast.js → 调用 AI（支持 Tool Calling）→ 返回回复 → cc-connect 发回微信</p>
   </div>
   <p>整个系统运行在一台 <strong>Android 手机</strong>上，只需要安装 <strong>Termux</strong>。不需要 root，不需要服务器。</p>
 </div>
@@ -254,7 +254,7 @@
 
   <div class="alert alert-warn">
     <span class="alert-icon">⚠️</span>
-    <div>微信机器人属于非官方使用方式，建议用<strong>小号</strong>运行。</div>
+    <div>微信机器人属于非官方使用方式，建议用<strong>小号</strong>运行。Android 14+ 的 <code>run-as</code> 命令受限，ADB 方式可能无法执行部分命令——届时需在手机 Termux 里手动输入。</div>
   </div>
 </div>
 
@@ -264,17 +264,14 @@
 <script>
 // 全局模式选择
 function selectGlobalMethod(method) {
-  // 设置 body class（不覆盖已有 class）
   document.body.classList.remove('adb-mode', 'phone-mode');
   document.body.classList.add(method + '-mode');
 
-  // 更新卡片样式
   document.querySelectorAll('.select-card').forEach(c => {
     c.classList.remove('selected-adb', 'selected-phone');
   });
   document.getElementById('card-' + method).classList.add('selected-' + method);
 
-  // 更新提示文字
   var hint = document.getElementById('method-hint');
   hint.textContent = '✅ 已选择 ' + (method === 'adb' ? 'PC + ADB' : '纯手机') + ' 方案，下方仅显示对应命令。切换方案点另一张卡片。';
   hint.style.color = '#a0d0a0';
@@ -295,14 +292,13 @@ function switchMethod(block, method) {
   <div class="section-title"><span class="icon">1.</span> 安装 Termux</div>
   <div class="step open">
     <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
-      <span class="step-num">1</span><span class="step-title">下载并安装 Termux</span><span class="step-time">⏱ 2 分钟</span>
+      <span class="step-num">1</span><span class="step-title">下载并安装 Termux + Termux:API</span><span class="step-time">⏱ 2 分钟</span>
     </div>
     <div class="step-body">
       <p>📥 <a href="https://f-droid.org/packages/com.termux/" style="color:#a0a0f0">F-Droid 下载 Termux</a> → 安装 APK。</p>
       <div class="alert alert-warn"><span class="alert-icon">⚠️</span><div>必须用 F-Droid 版！Google Play 版已停更，API 不兼容。</div></div>
       <p>安装 Termux:API 附加包：F-Droid 搜「Termux:API」→ 安装（提供 <code>termux-wake-lock</code> 防杀后台）。</p>
 
-      <!-- ADB 方式额外 -->
       <div class="method-bar" style="margin-top:16px">
         <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式 — 还需开启 USB 调试</button>
         <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 纯手机 — 跳过</button>
@@ -326,7 +322,7 @@ function switchMethod(block, method) {
   <div class="section-title"><span class="icon">2.</span> 安装依赖包</div>
   <div class="step open">
     <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
-      <span class="step-num">2</span><span class="step-title">pkg 安装 Node.js、proot、termux-api 等</span><span class="step-time">⏱ 5 分钟</span>
+      <span class="step-num">2</span><span class="step-title">pkg 安装 Node.js、proot、git 等</span><span class="step-time">⏱ 5 分钟</span>
     </div>
     <div class="step-body">
       <div class="method-bar">
@@ -344,8 +340,8 @@ pkg install nodejs git curl proot tmux termux-api -y</code></pre>
 
       <div class="alert alert-tip"><span class="alert-icon">💡</span><div>
         <strong>各包作用：</strong><br>
-        <code>nodejs</code> — 运行 AI 脚本 &nbsp; <code>curl</code> — 下载文件 &nbsp; <code>proot</code> — Linux 环境隔离<br>
-        <code>tmux</code> — 后台常驻 &nbsp; <code>termux-api</code> — 防杀后台（必须）
+        <code>nodejs</code> — 运行 AI 脚本 &nbsp; <code>git</code> — 克隆仓库 &nbsp; <code>curl</code> — 下载文件<br>
+        <code>proot</code> — Linux 环境隔离 &nbsp; <code>tmux</code> — 后台常驻 &nbsp; <code>termux-api</code> — 防杀后台
       </div></div>
 
       <div class="method-bar">
@@ -353,11 +349,12 @@ pkg install nodejs git curl proot tmux termux-api -y</code></pre>
         <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端验证</button>
       </div>
       <div class="method-content method-adb show">
-<pre><code>adb shell "run-as com.termux sh -c 'node --version && git --version'"</code></pre>
+<pre><code>adb shell "run-as com.termux sh -c 'node --version && git --version && which proot'"</code></pre>
       </div>
       <div class="method-content method-phone">
 <pre><code>node --version    # 应显示 v20.x 或更高
-git --version     # 应显示 git version 2.x</code></pre>
+git --version     # 应显示 git version 2.x
+which proot       # 应显示 /data/.../usr/bin/proot</code></pre>
       </div>
     </div>
   </div>
@@ -378,7 +375,7 @@ git --version     # 应显示 git version 2.x</code></pre>
         <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
       </div>
       <div class="method-content method-adb show">
-<pre><code>adb shell "run-as com.termux sh -c 'mkdir -p /data/data/com.termux/files/home/bin && curl -L \"https://github.com/chenhg5/cc-connect/releases/latest/download/cc-connect-linux-arm64\" -o /data/data/com.termux/files/home/bin/cc-connect && chmod +x /data/data/com.termux/files/home/bin/cc-connect'"</code></pre>
+<pre><code>adb shell "run-as com.termux sh -c 'mkdir -p ~/bin && curl -L \"https://github.com/chenhg5/cc-connect/releases/latest/download/cc-connect-linux-arm64\" -o ~/bin/cc-connect && chmod +x ~/bin/cc-connect'"</code></pre>
       </div>
       <div class="method-content method-phone">
 <pre><code>mkdir -p ~/bin
@@ -386,168 +383,108 @@ curl -L "https://github.com/chenhg5/cc-connect/releases/latest/download/cc-conne
 chmod +x ~/bin/cc-connect</code></pre>
       </div>
 
-      <div class="alert alert-tip"><span class="alert-icon">💡</span><div>如果 GitHub 下载慢，可以电脑下载后 <code>adb push</code> 传到手机。</div></div>
-    </div>
-  </div>
-</div>
-
-<!-- ====== STEP 4 ====== -->
-<div class="section">
-  <div class="section-title"><span class="icon">4.</span> 获取微信 Token <span class="flow-tag phone">📱 必须在手机上</span></div>
-  <div class="step open">
-    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
-      <span class="step-num phone">4</span><span class="step-title">扫码登录微信，获取 token 和 account_id</span><span class="step-time">⏱ 2 分钟</span>
-    </div>
-    <div class="step-body">
-      <p>这一步<strong>必须在手机 Termux 里操作</strong>（要显示二维码）。打开 Termux：</p>
-	      <p><code>--project</code> 参数对应 config.toml 里 <code>[[projects]].name</code>，这里 nene 是示例，按你的项目名改。</p>
-<pre><code>~/bin/cc-connect weixin setup --project nene</code></pre>
-      <p>用<strong>机器人专用的微信号</strong>扫终端里的二维码。成功后打印：</p>
-	      <div class="alert alert-tip"><span class="alert-icon">💡</span><div>如果终端没有直接显示二维码，而是显示了一个链接——点击那个链接，在浏览器里打开二维码。</div></div>
-<pre><code>token: wx_xxxxxxxxxxxxxxx
-account_id: xxxxxxxxxxxxx@im.wechat</code></pre>
-      <div class="alert alert-warn"><span class="alert-icon">📝</span><div>记下 <code>token</code> 和 <code>account_id</code>，配置要用。</div></div>
-    </div>
-  </div>
-</div>
-
-<!-- ====== STEPS 5-9 共享模式：创建文件 ====== -->
-<!-- 以下步骤 5-9 都遵循同样模式：电脑写文件 → push / 手机 nano 编辑 -->
-
-<!-- ====== STEP 5 ====== -->
-<div class="section">
-  <div class="section-title"><span class="icon">5.</span> 创建 AI 桥接脚本</div>
-  <div class="step open">
-    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
-      <span class="step-num">5</span><span class="step-title">编写 claude-fast.js — stdin→API→stdout</span><span class="step-time">⏱ 3 分钟</span>
-    </div>
-    <div class="step-body">
-      <p>这是整个机器人的<strong>核心</strong>——从 stdin 读用户消息 → 调 DeepSeek API → 回复写到 stdout。</p>
-
-      <!-- 代码内容两种方式共用，只展示一次 -->
-      <p>将下面完整代码保存为文件，<strong>只改一处：</strong><code>API_KEY</code> 换成你的 DeepSeek Key。</p>
-<pre><code><span class="lang-label">javascript</span>#!/data/data/com.termux/files/usr/bin/node
-// claude-fast — cc-connect AI 桥接脚本
-const https = require('https');
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-const readline = require('readline');
-
-const API_KEY = 'sk-你的DeepSeekKey';   // ← 改这里
-const BASE_URL = 'https://api.deepseek.com/v1';
-const MODEL = 'deepseek-v4-pro';
-const WORK_DIR = process.env.HOME + '/cc-connect';
-
-let systemPrompt = '';
-try {
-  systemPrompt = fs.readFileSync(path.join(WORK_DIR, 'CLAUDE.md'), 'utf-8');
-} catch (e) {
-  systemPrompt = '用简体中文回复，简洁直接。';
-}
-
-const conversation = [{ role: 'system', content: systemPrompt }];
-
-function emit(obj) { process.stdout.write(JSON.stringify(obj) + '\n'); }
-
-function extractUserText(line) {
-  let obj;
-  try { obj = JSON.parse(line); } catch (_) { return line.trim(); }
-  if (obj.type === 'user' && obj.message?.content) {
-    const c = obj.message.content;
-    if (typeof c === 'string') return c.trim();
-    if (Array.isArray(c)) return c.filter(x => x.type === 'text').map(x => x.text).join('\n').trim();
-  }
-  if (obj.type === 'system') return '';
-  return '';
-}
-
-function callAPI(userMsg, callback) {
-  if (!userMsg) { callback(null, ''); return; }
-  const url = new URL(BASE_URL + '/chat/completions');
-  const transport = url.protocol === 'https:' ? https : http;
-  conversation.push({ role: 'user', content: userMsg });
-  const body = JSON.stringify({
-    model: MODEL, messages: conversation,
-    stream: false, max_tokens: 2048, temperature: 0.8
-  });
-  const req = transport.request({
-    hostname: url.hostname, port: url.port || (url.protocol === 'https:' ? 443 : 80),
-    path: url.pathname, method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + API_KEY,
-      'Content-Length': Buffer.byteLength(body)
-    },
-    timeout: 120000
-  }, (res) => {
-    let data = '';
-    res.on('data', chunk => data += chunk);
-    res.on('end', () => {
-      try {
-        const json = JSON.parse(data);
-        const text = json.choices?.[0]?.message?.content || '';
-        if (text) { conversation.push({ role: 'assistant', content: text }); }
-        else { conversation.pop(); }
-        while (conversation.length > 29) conversation.splice(1, 2);
-        callback(null, text);
-      } catch (e) { conversation.pop(); callback(null, ''); }
-    });
-  });
-  req.on('error', (e) => { conversation.pop(); callback(e); });
-  req.on('timeout', () => { req.destroy(); callback(new Error('timeout')); });
-  req.write(body); req.end();
-}
-
-const rl = readline.createInterface({ input: process.stdin });
-rl.on('line', (line) => {
-  const msg = extractUserText(line.trim());
-  if (!msg) return;
-  callAPI(msg, (err, text) => {
-    if (err) {
-      emit({ type: 'assistant', message: { content: [{ type: 'text', text: '错误: ' + err.message }] } });
-    } else if (text) {
-      emit({ type: 'assistant', message: { content: [{ type: 'text', text: text }] } });
-    }
-    emit({ type: 'result', subtype: 'success' });
-  });
-});</code></pre>
-
       <div class="method-bar">
-        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式 — 电脑保存后推送</button>
-        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端 — nano 编辑</button>
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 验证</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 验证</button>
       </div>
       <div class="method-content method-adb show">
-        <p>电脑上保存为 <code>claude-fast.js</code>，然后推送：</p>
-<pre><code>adb push claude-fast.js //sdcard//Download//claude-fast.js
-adb shell "cat /sdcard/Download/claude-fast.js | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/bin/claude-fast.js && chmod +x /data/data/com.termux/files/home/bin/claude-fast.js'"</code></pre>
+<pre><code>adb shell "run-as com.termux sh -c '~/bin/cc-connect --version'"</code></pre>
       </div>
       <div class="method-content method-phone">
-        <p>Termux 里执行：</p>
-<pre><code>nano ~/bin/claude-fast.js    # 打开编辑器，贴入代码，Ctrl+X 保存
-chmod +x ~/bin/claude-fast.js</code></pre>
+<pre><code>~/bin/cc-connect --version    # 应显示版本号
+ls -la ~/bin/cc-connect        # 确认有 -rwx 权限</code></pre>
       </div>
-
-      <div class="alert alert-tip"><span class="alert-icon">🔧</span><div>后续更新代码：ADB 方式重新 push 即可；手机方式重新 nano 编辑。</div></div>
     </div>
   </div>
 </div>
 
-<!-- ====== STEP 6 ====== -->
+<!-- ====== STEP 4: Clone repo + proot-fs ====== -->
 <div class="section">
-  <div class="section-title"><span class="icon">6.</span> 创建 claude 包装器</div>
+  <div class="section-title"><span class="icon">4.</span> 克隆仓库 + 准备 proot 环境</div>
   <div class="step open">
     <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
-      <span class="step-num">6</span><span class="step-title">让 cc-connect 找到我们的 AI 脚本</span><span class="step-time">⏱ 1 分钟</span>
+      <span class="step-num">4</span><span class="step-title">git clone 项目 + 创建 proot DNS/SSL 目录</span><span class="step-time">⏱ 2 分钟</span>
     </div>
     <div class="step-body">
-      <p>cc-connect 通过执行 <code>/usr/bin/claude</code> 来调用 AI。<strong>不需要装 Claude Code</strong>——我们只是借用这个路径。</p>
+      <p>克隆 pocket-wechat-bot 仓库（包含 CLAUDE.md、claude-fast.js、skills/、config 模板等全部文件），同时准备 proot 所需的 DNS 和 SSL 证书。</p>
 
       <div class="method-bar">
         <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式</button>
         <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
       </div>
       <div class="method-content method-adb show">
+<pre><code>adb shell "run-as com.termux sh -c 'cd ~ && git clone https://github.com/99cz99/pocket-wechat-bot.git'"
+adb shell "run-as com.termux sh -c 'mkdir -p ~/proot-fs/etc/ssl && cp /data/data/com.termux/files/usr/etc/resolv.conf ~/proot-fs/etc/resolv.conf && cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>cd ~
+git clone https://github.com/99cz99/pocket-wechat-bot.git
+cd pocket-wechat-bot
+
+# 准备 proot DNS 和 SSL 证书
+mkdir -p ~/proot-fs/etc/ssl
+cp /data/data/com.termux/files/usr/etc/resolv.conf ~/proot-fs/etc/resolv.conf
+cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/</code></pre>
+      </div>
+
+      <div class="alert alert-tip"><span class="alert-icon">📂</span><div>仓库包含：<code>CLAUDE.md</code>（700+ 行完整人设 + 人格切换协议）、<code>claude-fast.js</code>（v8，支持 Tool Calling + 会话记忆）、<code>skills/nene/</code>（宁宁人格数据）、<code>config/config.toml.template</code>（完整配置模板）、<code>scripts/start-bot.sh</code>（启动脚本）。</div></div>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 验证</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 验证</button>
+      </div>
+      <div class="method-content method-adb show">
+<pre><code>adb shell "run-as com.termux sh -c 'ls ~/pocket-wechat-bot/CLAUDE.md ~/proot-fs/etc/resolv.conf ~/proot-fs/etc/ssl/'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>ls CLAUDE.md claude-fast.js              # 确认在仓库目录内
+ls ~/proot-fs/etc/resolv.conf             # DNS 配置
+ls ~/proot-fs/etc/ssl/                    # TLS 证书目录</code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEP 5: 微信 token ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">5.</span> 获取微信 Token <span class="flow-tag phone">📱 必须在手机上</span></div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num phone">5</span><span class="step-title">扫码登录微信，获取 token 和 account_id</span><span class="step-time">⏱ 2 分钟</span>
+    </div>
+    <div class="step-body">
+      <p>这一步<strong>必须在手机 Termux 里操作</strong>（要显示二维码）。打开 Termux：</p>
+      <p><code>--project</code> 参数对应 config.toml 里 <code>[[projects]].name</code>，这里是示例，按你的实际项目名改。</p>
+<pre><code>~/bin/cc-connect weixin setup --project nene</code></pre>
+      <p>用<strong>机器人专用的微信号</strong>扫终端里的二维码。成功后打印：</p>
+      <div class="alert alert-tip"><span class="alert-icon">💡</span><div>如果终端没有直接显示二维码，而是显示了一个链接——点击那个链接，在浏览器里打开二维码。</div></div>
+<pre><code>token: wx_xxxxxxxxxxxxxxx
+account_id: xxxxxxxxxxxxx@im.wechat</code></pre>
+      <div class="alert alert-warn"><span class="alert-icon">📝</span><div>记下 <code>token</code> 和 <code>account_id</code>，下一步配置要用。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEP 6: AI 桥接 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">6.</span> 设置 AI 桥接</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">6</span><span class="step-title">安装 claude-fast.js + 创建 claude 包装器</span><span class="step-time">⏱ 2 分钟</span>
+    </div>
+    <div class="step-body">
+      <p>claude-fast.js 是核心 AI 脚本（v8，支持 Tool Calling、会话记忆、人格切换）。cc-connect 通过调用 <code>/usr/bin/claude</code> 来启动它。<strong>不需要装 Claude Code</strong>——我们只是借用这个路径。</p>
+
+      <div class="alert alert-tip"><span class="alert-icon">💡</span><div>直接从仓库复制，无需手动输入代码：<code>cp claude-fast.js ~/bin/</code></div></div>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
+      </div>
+      <div class="method-content method-adb show">
+        <p><strong>步骤 A：复制 claude-fast.js</strong></p>
+<pre><code>adb shell "run-as com.termux sh -c 'cp ~/pocket-wechat-bot/claude-fast.js ~/bin/claude-fast.js && chmod +x ~/bin/claude-fast.js'"</code></pre>
+        <p><strong>步骤 B：创建 /usr/bin/claude 包装器</strong></p>
 <pre><code>adb shell "run-as com.termux sh -c 'cat > /data/data/com.termux/files/usr/bin/claude << EOF
 #!/data/data/com.termux/files/usr/bin/sh
 exec /usr/bin/node /home/bin/claude-fast.js \"\\\$@\"
@@ -555,231 +492,171 @@ EOF
 chmod +x /data/data/com.termux/files/usr/bin/claude'"</code></pre>
       </div>
       <div class="method-content method-phone">
+        <p><strong>步骤 A：复制 claude-fast.js</strong></p>
+<pre><code>cp ~/pocket-wechat-bot/claude-fast.js ~/bin/claude-fast.js
+chmod +x ~/bin/claude-fast.js</code></pre>
+        <p><strong>步骤 B：创建 /usr/bin/claude 包装器</strong></p>
 <pre><code>cat > /data/data/com.termux/files/usr/bin/claude << 'EOF'
 #!/data/data/com.termux/files/usr/bin/sh
-exec /data/data/com.termux/files/usr/bin/node /data/data/com.termux/files/home/bin/claude-fast.js "$@"
+exec /usr/bin/node /data/data/com.termux/files/home/bin/claude-fast.js "$@"
 EOF
 chmod +x /data/data/com.termux/files/usr/bin/claude</code></pre>
       </div>
 
-      <div class="alert alert-tip"><span class="alert-icon">🔗</span><div>链路：cc-connect → fork <code>/usr/bin/claude</code> → 包装器 → <code>node claude-fast.js</code> → DeepSeek API。</div></div>
-    </div>
-  </div>
-</div>
-
-<!-- ====== STEP 7 ====== -->
-<div class="section">
-  <div class="section-title"><span class="icon">7.</span> 创建人设文件</div>
-  <div class="step open">
-    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
-      <span class="step-num">7</span><span class="step-title">编写 CLAUDE.md — 机器人的灵魂</span><span class="step-time">⏱ 2 分钟</span>
-    </div>
-    <div class="step-body">
-      <p><code>CLAUDE.md</code> 是系统提示词，定义机器人的性格和回复风格。</p>
-
-      <div class="alert alert-warn"><span class="alert-icon">⚠️</span><div><strong>下面只是作者用的示例</strong>（绫地宁宁角色），你应该换成自己的设定——客服、助手、角色扮演……格式不限。</div></div>
-
-      <p>参照以下格式写你自己的 CLAUDE.md：</p>
-<pre><code><span class="lang-label">markdown</span># 微信机器人规则
-
-## 底线：回复中绝对不要出现
-- 思考和推理过程
-- 工具调用信息
-- 工作目录路径
-
-## 要求
-- 直接给结果，像普通聊天一样回复
-- 始终用简体中文
-
----
-
-# 你的机器人人格
-
-## 身份
-在这里写机器人的人设...
-
-## 回复规则
-- 用「我」来回复
-- ...</code></pre>
-
       <div class="method-bar">
-        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式 — 电脑保存后推送</button>
-        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端 — nano 编辑</button>
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 验证</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 验证</button>
       </div>
       <div class="method-content method-adb show">
-        <p>电脑上保存为 <code>CLAUDE.md</code>，推送：</p>
-<pre><code>adb shell "run-as com.termux sh -c 'mkdir -p /data/data/com.termux/files/home/cc-connect'"
-adb push CLAUDE.md //sdcard//Download//CLAUDE.md
-adb shell "cat /sdcard/Download/CLAUDE.md | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/cc-connect/CLAUDE.md'"</code></pre>
+<pre><code>adb shell "run-as com.termux sh -c 'node -c ~/bin/claude-fast.js && cat /data/data/com.termux/files/usr/bin/claude'"</code></pre>
       </div>
       <div class="method-content method-phone">
-<pre><code>mkdir -p ~/cc-connect
-nano ~/cc-connect/CLAUDE.md    # 贴入内容，Ctrl+X 保存</code></pre>
+<pre><code>node -c ~/bin/claude-fast.js              # 语法检查，无输出 = 正确
+cat /data/data/com.termux/files/usr/bin/claude  # 应显示 exec /usr/bin/node ...</code></pre>
       </div>
 
-      <div class="alert alert-tip"><span class="alert-icon">🎭</span><div>CLAUDE.md 改完<strong>无需重启</strong>，下一轮对话自动生效。</div></div>
+      <div class="alert alert-info"><span class="alert-icon">🔗</span><div>链路：cc-connect → fork <code>/usr/bin/claude</code> → 包装器 → <code>node claude-fast.js</code> → DeepSeek API。proot 内 <code>/usr/bin/node</code> 和 <code>/home/bin/</code> 由 bind mount 提供。</div></div>
     </div>
   </div>
 </div>
 
-<!-- ====== STEP 8 ====== -->
+<!-- ====== STEP 7: 人设 + 配置 ====== -->
 <div class="section">
-  <div class="section-title"><span class="icon">8.</span> 配置 cc-connect</div>
+  <div class="section-title"><span class="icon">7.</span> 部署人设文件和配置</div>
   <div class="step open">
     <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
-      <span class="step-num">8</span><span class="step-title">创建 config.toml — 连接一切</span><span class="step-time">⏱ 3 分钟</span>
+      <span class="step-num">7</span><span class="step-title">复制 CLAUDE.md、skills/、config.toml 模板</span><span class="step-time">⏱ 3 分钟</span>
     </div>
     <div class="step-body">
-      <p><strong>把三个占位符换成第 4 步获取的值。</strong><code>admin_from</code> 先填 <code>"*"</code>，跑起来后发 /whoami 获取 wxid 再改。</p>
-
-<pre><code><span class="lang-label">toml</span>language = "zh"
-idle_timeout_mins = 120
-
-[[projects]]
-  name = "nene"
-  admin_from = "*"   # 先填 *，跑起来后发 /whoami 获取 wxid 再改
-
-  [projects.agent]
-    type = "claudecode"
-    [projects.agent.options]
-      mode = "acceptEdits"
-      quiet = true
-      work_dir = "/data/data/com.termux/files/home/cc-connect"
-      allowed_tools = ["Read", "Grep", "Glob", "Write", "Edit"]
-
-  [[projects.platforms]]
-    type = "weixin"
-    [projects.platforms.options]
-      account_id = "你的account_id"       # ← 改
-      allow_from = "*"
-      token = "你的微信token"              # ← 改
-
-[log]
-  level = "info"
-[bridge]
-  enabled = true; port = 9810; token = "bridge-token-随便填"
-[management]
-  enabled = true; port = 9820; token = "mgmt-token-随便填"
-[display]
-  thinking_messages = false; tool_messages = false</code></pre>
-
-      <div class="method-bar">
-        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式 — 电脑保存后推送</button>
-        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端 — nano 编辑</button>
-      </div>
-      <div class="method-content method-adb show">
-        <p>电脑上保存为 <code>config.toml</code>，推送：</p>
-<pre><code>adb shell "run-as com.termux sh -c 'mkdir -p /data/data/com.termux/files/home/.cc-connect'"
-adb push config.toml //sdcard//Download//config.toml
-adb shell "cat /sdcard/Download/config.toml | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/.cc-connect/config.toml'"</code></pre>
-      </div>
-      <div class="method-content method-phone">
-<pre><code>mkdir -p ~/.cc-connect
-nano ~/.cc-connect/config.toml    # 贴入内容，Ctrl+X 保存</code></pre>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ====== STEP 9 ====== -->
-<div class="section">
-  <div class="section-title"><span class="icon">9.</span> 创建启动脚本</div>
-  <div class="step open">
-    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
-      <span class="step-num">9</span><span class="step-title">编写 start-nene.sh — 一键启动</span><span class="step-time">⏱ 1 分钟</span>
-    </div>
-    <div class="step-body">
-      <p>启动脚本负责：检查旧实例 → 清理锁文件 → 用 proot 隔离启动 cc-connect。</p>
-
-<pre><code><span class="lang-label">bash</span>#!/data/data/com.termux/files/usr/bin/bash
-echo ""
-echo "  =============================="
-echo "    nene - cc-connect 微信机器人"
-echo "  =============================="
-echo ""
-
-CONFIG="$HOME/.cc-connect/config.toml"
-LOCK="$HOME/.cc-connect/.config.toml.lock"
-
-if [ -f "$LOCK" ]; then
-    echo "[!] 已有实例在运行，先停止..."
-    proot \
-      -b /data/data/com.termux/files/usr:/usr \
-      -b $HOME:/home \
-      -b /dev:/dev -b /proc:/proc \
-      /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin \
-      $HOME/bin/cc-connect --config "$CONFIG" --force 2>/dev/null
-    rm -f "$LOCK"
-    sleep 1
-fi
-
-echo "[*] 启动中..."
-
-SSL_CERT_FILE=/data/data/com.termux/files/usr/etc/tls/cert.pem \
-proot \
-  -b $HOME/proot-fs/etc/resolv.conf:/etc/resolv.conf \
-  -b $HOME/proot-fs/etc/ssl:/etc/ssl \
-  -b /data/data/com.termux/files/usr:/usr \
-  -b $HOME:/home \
-  -b /apex/com.android.runtime:/apex/com.android.runtime \
-  -b /dev:/dev -b /proc:/proc \
-  /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" PATH=/usr/bin:/usr/local/bin:/home/bin \
-  $HOME/bin/cc-connect --config "$CONFIG" &
-
-sleep 3
-echo "[*] 管理面板: http://127.0.0.1:9820"
-echo "[*] 已启动~"</code></pre>
-
-      <div class="method-bar">
-        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式 — 电脑保存后推送</button>
-        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端 — nano 编辑</button>
-      </div>
-      <div class="method-content method-adb show">
-        <p>电脑上保存为 <code>start-nene.sh</code>，推送：</p>
-<pre><code>adb push start-nene.sh //sdcard//Download//start-nene.sh
-adb shell "cat /sdcard/Download/start-nene.sh | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/start-nene.sh && chmod +x /data/data/com.termux/files/home/start-nene.sh'"</code></pre>
-      </div>
-      <div class="method-content method-phone">
-<pre><code>nano ~/start-nene.sh    # 贴入代码，Ctrl+X 保存
-chmod +x ~/start-nene.sh</code></pre>
-      </div>
-
-      <div class="alert alert-info"><span class="alert-icon">🔍</span><div><strong>proot 是什么？</strong>Android 的 libc 是 Bionic，而 cc-connect（Go 编译的）需要 glibc 环境。proot 创建 Linux 命名空间隔离，让 cc-connect 以为自己在标准 Linux 上运行。</div></div>
-    </div>
-  </div>
-</div>
-
-<!-- ====== STEP 10 ====== -->
-<div class="section">
-  <div class="section-title"><span class="icon">10.</span> 启动 & 后台常驻</div>
-  <div class="step open">
-    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
-      <span class="step-num">10</span><span class="step-title">启动机器人，保持后台运行</span><span class="step-time">⏱ 1 分钟</span>
-    </div>
-    <div class="step-body">
-      <p>用 <strong>nohup</strong> 启动，关掉 Termux 也不会死：</p>
+      <p>从仓库把所有人设和配置文件复制到位，然后编辑 config.toml 填入你的凭据。</p>
 
       <div class="method-bar">
         <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式</button>
         <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
       </div>
       <div class="method-content method-adb show">
-<pre><code># 先杀旧进程
-adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"
-
-# 启动（写日志到文件）
-adb shell "run-as com.termux sh -c 'nohup /data/data/com.termux/files/usr/bin/bash /data/data/com.termux/files/home/start-nene.sh > /data/data/com.termux/files/home/nene.log 2>&1 &'"
-
-# 等 5 秒后确认
-sleep 5
-adb shell "run-as com.termux sh -c 'cat /data/data/com.termux/files/home/nene.log'"</code></pre>
-        <p>看到 <code>cc-connect is running</code> 就是成功了。</p>
-        <div class="alert alert-warn"><span class="alert-icon">⚠️</span><div>如果日志里看到 <code>proot: command not found</code>，说明 ADB 环境 PATH 不全。此时<strong>必须在手机 Termux 里手动执行下方手机端的 nohup 命令</strong>。</div></div>
+        <p><strong>步骤 A：创建目录并复制人设文件</strong></p>
+<pre><code>adb shell "run-as com.termux sh -c 'mkdir -p ~/cc-connect ~/.cc-connect ~/.claude/skills'"
+adb shell "run-as com.termux sh -c 'cp ~/pocket-wechat-bot/CLAUDE.md ~/cc-connect/CLAUDE.md'"
+adb shell "run-as com.termux sh -c 'cp -r ~/pocket-wechat-bot/skills/nene ~/.claude/skills/'"</code></pre>
+        <p><strong>步骤 B：复制 config.toml 模板</strong></p>
+<pre><code>adb shell "run-as com.termux sh -c 'cp ~/pocket-wechat-bot/config/config.toml.template ~/.cc-connect/config.toml'"</code></pre>
+        <p><strong>步骤 C：在电脑上编辑 config.toml</strong>（仓库里已有模板）</p>
+        <p>用 VSCode 打开仓库的 <code>config/config.toml.template</code>，改好三个占位符后推送到手机：</p>
+<pre><code>adb push config\config.toml /sdcard/Download/config.toml
+adb shell "cat /sdcard/Download/config.toml | run-as com.termux sh -c 'cat > ~/.cc-connect/config.toml'"</code></pre>
       </div>
       <div class="method-content method-phone">
-<pre><code>termux-wake-lock acquire     # 防止 Android 杀后台
-nohup bash ~/start-nene.sh > ~/nene.log 2>&1 &</code></pre>
-        <p>看到 <code>[已启动~]</code> 即可关 Termux。</p>
+        <p><strong>步骤 A：创建目录并复制人设文件</strong></p>
+<pre><code>mkdir -p ~/cc-connect ~/.cc-connect ~/.claude/skills
+cp ~/pocket-wechat-bot/CLAUDE.md ~/cc-connect/CLAUDE.md
+cp -r ~/pocket-wechat-bot/skills/nene ~/.claude/skills/</code></pre>
+        <p><strong>步骤 B：复制并编辑 config.toml</strong></p>
+<pre><code>cp ~/pocket-wechat-bot/config/config.toml.template ~/.cc-connect/config.toml
+nano ~/.cc-connect/config.toml</code></pre>
+      </div>
+
+      <p><strong>config.toml 中必须修改的三个占位符：</strong></p>
+<pre><code>admin_from = "&lt;YOUR_WECHAT_OPENID&gt;@im.wechat"   # 先填 "*"，跑起来后发 /whoami 获取再改
+api_key = "&lt;YOUR_DEEPSEEK_API_KEY&gt;"           # DeepSeek API Key
+account_id = "&lt;YOUR_BOT_ACCOUNT_ID&gt;"          # 第 5 步扫码获取的
+token = "&lt;YOUR_BOT_TOKEN&gt;"                    # 第 5 步扫码获取的</code></pre>
+
+      <div class="alert alert-tip"><span class="alert-icon">🎭</span><div><strong>CLAUDE.md 改完无需重启</strong>，下一轮对话自动生效。人格系统包含六层信任阶梯、福利事件、人格切换协议，详见仓库 <a href="https://github.com/99cz99/pocket-wechat-bot" style="color:#a0d0a0">README</a>。</div></div>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 验证</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 验证</button>
+      </div>
+      <div class="method-content method-adb show">
+<pre><code>adb shell "run-as com.termux sh -c 'ls ~/cc-connect/CLAUDE.md ~/.cc-connect/config.toml ~/.claude/skills/nene/SKILL.md'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>ls ~/cc-connect/CLAUDE.md                  # 人设文件（700+ 行）
+ls ~/.cc-connect/config.toml               # 配置文件
+ls ~/.claude/skills/nene/SKILL.md          # 人格 Skill
+wc -l ~/cc-connect/CLAUDE.md               # 应显示 400+ 行</code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEP 8: 启动脚本 + 环境变量 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">8.</span> 创建启动脚本 + 设置环境变量</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">8</span><span class="step-title">复制启动脚本，设置 API Key 环境变量</span><span class="step-time">⏱ 1 分钟</span>
+    </div>
+    <div class="step-body">
+      <p>启动脚本负责：检查 ANTHROPIC_API_KEY → 清理旧锁文件 → 用 proot 隔离启动 cc-connect。</p>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
+      </div>
+      <div class="method-content method-adb show">
+        <p><strong>步骤 A：复制启动脚本</strong></p>
+<pre><code>adb shell "run-as com.termux sh -c 'cp ~/pocket-wechat-bot/scripts/start-bot.sh ~/start-nene.sh && chmod +x ~/start-nene.sh'"</code></pre>
+        <p><strong>步骤 B：设置环境变量</strong></p>
+<pre><code>adb shell "run-as com.termux sh -c 'echo \"export ANTHROPIC_API_KEY=sk-你的key\" >> ~/.bashrc && source ~/.bashrc'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+        <p><strong>步骤 A：复制启动脚本</strong></p>
+<pre><code>cp ~/pocket-wechat-bot/scripts/start-bot.sh ~/start-nene.sh
+chmod +x ~/start-nene.sh</code></pre>
+        <p><strong>步骤 B：设置环境变量</strong></p>
+<pre><code>echo 'export ANTHROPIC_API_KEY=sk-你的key' >> ~/.bashrc
+source ~/.bashrc</code></pre>
+      </div>
+
+      <div class="alert alert-warn"><span class="alert-icon">⚠️</span><div><strong>必须设置 ANTHROPIC_API_KEY！</strong>启动脚本会检查这个环境变量，未设置则拒绝启动。把 <code>sk-你的key</code> 换成你的 DeepSeek API Key。</div></div>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 验证</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 验证</button>
+      </div>
+      <div class="method-content method-adb show">
+<pre><code>adb shell "run-as com.termux sh -c 'ls -la ~/start-nene.sh && bash -n ~/start-nene.sh && echo \$ANTHROPIC_API_KEY'"</code></pre>
+      </div>
+      <div class="method-content method-phone">
+<pre><code>ls -la ~/start-nene.sh      # 确认有 -rwx 权限
+bash -n ~/start-nene.sh      # 语法检查，无输出 = 正确
+echo $ANTHROPIC_API_KEY      # 应显示 sk-...（非空）</code></pre>
+      </div>
+
+      <div class="alert alert-info"><span class="alert-icon">🔍</span><div><strong>proot 是什么？</strong>Android 的 libc 是 Bionic，cc-connect（Go 编译的）需要 glibc 环境。proot 创建 Linux 命名空间隔离，让 cc-connect 以为自己在标准 Linux 上运行。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STEP 9: 启动 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">9.</span> 启动 & 后台常驻</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">9</span><span class="step-title">tmux 启动机器人，保持后台运行</span><span class="step-time">⏱ 1 分钟</span>
+    </div>
+    <div class="step-body">
+      <p>用 <strong>tmux</strong>（终端复用器）启动，关闭 Termux 窗口后进程不中断。</p>
+
+      <div class="method-bar">
+        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB 方式</button>
+        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
+      </div>
+      <div class="method-content method-adb show">
+        <p>ADB 环境下 tmux 可能无法正常 attach。推荐直接在手机 Termux 里执行下方手机端的命令。</p>
+        <div class="alert alert-warn"><span class="alert-icon">⚠️</span><div>如果 ADB 的 <code>run-as</code> 报 Permission denied（Android 14+），必须在手机 Termux 里手动执行。</div></div>
+      </div>
+      <div class="method-content method-phone">
+<pre><code># 创建 tmux 会话并启动
+tmux new -s nene
+bash ~/start-nene.sh
+
+# 看到 "cc-connect is running" 后
+# 按 Ctrl+B 然后 D → 断开 tmux，bot 继续跑
+
+# 重新连接查看：tmux attach -t nene</code></pre>
       </div>
 
       <p><strong>验证是否在跑：</strong></p>
@@ -788,22 +665,12 @@ nohup bash ~/start-nene.sh > ~/nene.log 2>&1 &</code></pre>
         <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
       </div>
       <div class="method-content method-adb show">
-<pre><code>adb shell "run-as com.termux sh -c 'pgrep -f cc-connect && echo 在跑 || echo 没跑'"</code></pre>
+<pre><code>adb shell "run-as com.termux sh -c 'pgrep -f cc-connect && echo 在跑 || echo 没跑'"
+adb shell "run-as com.termux sh -c 'tmux ls'"</code></pre>
       </div>
       <div class="method-content method-phone">
-<pre><code>pgrep -f cc-connect    # 返回数字 = 在跑</code></pre>
-      </div>
-
-      <p><strong>查看日志：</strong></p>
-      <div class="method-bar">
-        <button class="method-tab active-adb method-tab-adb" onclick="switchMethod(this,'adb')">🖥️ ADB</button>
-        <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端</button>
-      </div>
-      <div class="method-content method-adb show">
-<pre><code>adb shell "run-as com.termux sh -c 'tail -30 /data/data/com.termux/files/home/nene.log'"</code></pre>
-      </div>
-      <div class="method-content method-phone">
-<pre><code>tail -f ~/nene.log    # 实时滚动，Ctrl+C 退出</code></pre>
+<pre><code>pgrep -f cc-connect    # 返回数字 = 在跑
+tmux ls                 # 应显示 nene: 1 windows...</code></pre>
       </div>
 
       <p><strong>停止：</strong></p>
@@ -826,17 +693,51 @@ termux-wake-lock release</code></pre>
   </div>
 </div>
 
+<!-- ====== STEP 10: 防杀 ====== -->
+<div class="section">
+  <div class="section-title"><span class="icon">10.</span> 防止 Android 杀掉 Termux（重要）</div>
+  <div class="step open">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="step-num">10</span><span class="step-title">关闭省电限制 + 确认系统豁免</span><span class="step-time">⏱ 2 分钟</span>
+    </div>
+    <div class="step-body">
+      <p>Android 系统会主动杀后台进程省电。就算用了 tmux，Termux 本身被杀掉的话 bot 也会停。</p>
+
+      <p><strong>步骤 1：关闭后台省电限制</strong></p>
+      <ol style="margin-left:20px;line-height:2">
+        <li>打开手机「设置」→「应用」→「应用管理」</li>
+        <li>找到 <strong>Termux</strong></li>
+        <li>点「耗电/电量」→「后台耗电管理」</li>
+        <li>设为 <strong>「允许后台运行」</strong>（不要选「智能限制」或「自动管理」）</li>
+      </ol>
+
+      <p><strong>步骤 2：确认系统已豁免</strong></p>
+      <ol style="margin-left:20px;line-height:2">
+        <li>进入「设置」→「关于手机」</li>
+        <li>连续点「版本号」7 次，开启<strong>开发者选项</strong></li>
+        <li>进入「设置」→「系统」→「开发者选项」</li>
+        <li>找到「<strong>待机应用</strong>」</li>
+        <li>查看 Termux 是否显示为 <strong>EXEMPTED</strong>（已豁免）</li>
+      </ol>
+
+      <div class="alert alert-tip"><span class="alert-icon">💡</span><div>不同品牌手机的设置路径略有差异。华为/荣耀在「应用启动管理」、小米在「省电策略」、OPPO/一加在「耗电保护」、三星在「电池」→「后台使用限制」、vivo 在「后台高耗电」。</div></div>
+    </div>
+  </div>
+</div>
+
 <!-- ====== 完成 ====== -->
 <div class="section">
   <div class="section-title"><span class="icon">✅</span> 部署完成</div>
   <p style="font-size:1.05em;color:#a0d0a0">恭喜！你的微信机器人已经在运行了。🎉</p>
-  <p><strong>测试：</strong>用另一个微信号给机器人发消息，3-10 秒收到 AI 回复。</p>
-  <p><strong>管理面板：</strong><code>http://127.0.0.1:9820</code></p>
+  <p><strong>测试：</strong>用另一个微信号给机器人发消息，首条 5-30 秒，后续 3-10 秒收到 AI 回复。</p>
+  <p><strong>管理面板：</strong>手机浏览器打开 <code>http://127.0.0.1:9820</code>，token 在 config.toml 的 <code>management.token</code>。</p>
   <p><strong>日常维护：</strong></p>
   <ul style="margin-left:20px;line-height:2;color:#b0b0c0">
+    <li>更新仓库：<code>cd ~/pocket-wechat-bot && git pull</code></li>
     <li>改 CLAUDE.md → <strong>无需重启</strong>，下一轮自动生效</li>
-    <li>改代码或 config → 需要重启</li>
-    <li>重启手机后 → 开 Termux → <code>termux-wake-lock acquire && nohup bash ~/start-nene.sh > ~/nene.log 2>&1 &</code></li>
+    <li>改 config.toml 或 claude-fast.js → 需要重启</li>
+    <li>重启手机后 → 开 Termux → <code>tmux new -s nene && bash ~/start-nene.sh</code></li>
+    <li>微信 token 过期 → 重新执行第 5 步扫码，更新 config.toml 后重启</li>
   </ul>
 </div>
 
@@ -851,7 +752,7 @@ termux-wake-lock release</code></pre>
     </div>
     <div class="step-body">
       <p>用另一个微信号给机器人的微信<strong>发任意消息</strong>，bot 会自动回复。首次回复 10-30 秒，后续 3-10 秒。</p>
-      <p>bot 有<strong>对话记忆</strong>——同一段会话内记得之前聊过什么。如果超过 <code>idle_timeout_mins</code>（默认 120 分钟）没说话，会话重置。</p>
+      <p>bot 有<strong>对话记忆</strong>——同一段会话内记得之前聊过什么。超过 <code>idle_timeout_mins</code>（默认 120 分钟）没说话，会话重置。</p>
     </div>
   </div>
 
@@ -886,7 +787,7 @@ termux-wake-lock release</code></pre>
     </div>
     <div class="step-body">
       <p>编辑 <code>~/cc-connect/CLAUDE.md</code>，改完保存。<strong>无需重启</strong>，下一轮对话自动用新人设。</p>
-      <p>这意味着你可以随时调整 bot 的性格、回复风格、规则，改完发条消息就能看到效果。</p>
+      <p>也可以通过微信发 <code>切换 人格名</code> 来热切换（需先在 <code>~/.claude/skills/</code> 下放置对应 Skill 目录）。</p>
     </div>
   </div>
 
@@ -909,11 +810,21 @@ termux-wake-lock release</code></pre>
   <div class="step">
     <div class="step-header" onclick="this.parentElement.classList.toggle('open')">
       <span class="step-num">6</span>
-      <span class="step-title">添加更多微信好友使用</span>
+      <span class="step-title">PC 端管理配置</span>
     </div>
     <div class="step-body">
-      <p>默认 <code>allow_from = "*"</code>，任何微信好友都能和 bot 对话，且每人有独立会话。</p>
-      <p>如果想限定只有特定人能聊，把 <code>allow_from</code> 改成白名单（逗号分隔的 wxid 列表）。</p>
+      <p>日常改配置不用在手机上戳 nano。PC 上改完，adb push 推送：</p>
+<pre><code># PC 上编辑仓库里的 config.toml
+code config\config.toml
+
+# 推送到手机
+adb push config\config.toml /sdcard/Download/config.toml
+adb shell "cat /sdcard/Download/config.toml | run-as com.termux sh -c 'cat > ~/.cc-connect/config.toml'"
+
+# 重启 bot
+adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"
+# 然后在手机 Termux 里: bash ~/start-nene.sh</code></pre>
+      <div class="alert alert-warn"><span class="alert-icon">⚠️</span><div>Android 14+ 的 <code>run-as</code> 可能不可用。此时在手机 Termux 里手动执行对应命令。</div></div>
     </div>
   </div>
 
@@ -926,20 +837,20 @@ termux-wake-lock release</code></pre>
     <div style="color:#9090b0;margin-bottom:6px"># 查看状态</div>
     <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'pgrep -f cc-connect && echo 在跑 || echo 没跑'"</span></div>
     <br>
-    <div style="color:#9090b0;margin-bottom:6px"># 看日志</div>
-    <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'tail -30 /data/data/com.termux/files/home/nene.log'"</span></div>
+    <div style="color:#9090b0;margin-bottom:6px"># 看日志（如果用了 nohup）</div>
+    <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'tail -30 ~/nene.log'"</span></div>
     <br>
     <div style="color:#9090b0;margin-bottom:6px"># 重启</div>
     <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"</span></div>
-    <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'nohup /data/data/com.termux/files/usr/bin/bash /data/data/com.termux/files/home/start-nene.sh > /data/data/com.termux/files/home/nene.log 2>&1 &'"</span></div>
+    <div><span style="color:#c8c8d4;font-size:0.82em"># 然后在手机 Termux 的 tmux 里: bash ~/start-nene.sh</span></div>
     <br>
     <div style="color:#9090b0;margin-bottom:6px"># 更新 CLAUDE.md（无需重启）</div>
-    <div><span style="color:#c8c8d4">adb push CLAUDE.md //sdcard//Download//</span></div>
-    <div><span style="color:#c8c8d4">adb shell "cat /sdcard/Download/CLAUDE.md | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/cc-connect/CLAUDE.md'"</span></div>
+    <div><span style="color:#c8c8d4">adb push CLAUDE.md /sdcard/Download/</span></div>
+    <div><span style="color:#c8c8d4">adb shell "cat /sdcard/Download/CLAUDE.md | run-as com.termux sh -c 'cat > ~/cc-connect/CLAUDE.md'"</span></div>
     <br>
-    <div style="color:#9090b0;margin-bottom:6px"># 更新 JS 脚本（需重启）</div>
-    <div><span style="color:#c8c8d4">adb push claude-fast.js //sdcard//Download//</span></div>
-    <div><span style="color:#c8c8d4">adb shell "cat /sdcard/Download/claude-fast.js | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/bin/claude-fast.js && chmod +x /data/data/com.termux/files/home/bin/claude-fast.js'"</span></div>
+    <div style="color:#9090b0;margin-bottom:6px"># 更新 claude-fast.js（需重启）</div>
+    <div><span style="color:#c8c8d4">adb push claude-fast.js /sdcard/Download/</span></div>
+    <div><span style="color:#c8c8d4">adb shell "cat /sdcard/Download/claude-fast.js | run-as com.termux sh -c 'cat > ~/bin/claude-fast.js && chmod +x ~/bin/claude-fast.js'"</span></div>
     <br>
     <div style="color:#9090b0;margin-bottom:6px"># 停止</div>
     <div><span style="color:#c8c8d4">adb shell "run-as com.termux sh -c 'pkill -f cc-connect && termux-wake-lock release'"</span></div>
@@ -947,7 +858,7 @@ termux-wake-lock release</code></pre>
     <div style="color:#9090b0;margin-bottom:6px"># 无线 ADB（不想插线）</div>
     <div><span style="color:#c8c8d4">adb tcpip 5555</span></div>
     <div><span style="color:#c8c8d4">adb connect 手机IP:5555</span></div>
-    <div style="color:#707088;font-size:0.82em">重启手机后要重新 USB 连一次。</div>
+    <div style="color:#707088;font-size:0.82em">重启手机后要重新 USB 连一次。Android 14+ run-as 不可用见 FAQ。</div>
   </div>
 </div>
 
@@ -959,26 +870,33 @@ termux-wake-lock release</code></pre>
     <div class="step-body">
       <ol style="margin-left:20px;line-height:2">
         <li>bot 在跑吗？<code>pgrep -f cc-connect</code></li>
-        <li>API Key 对了吗？<code>cat ~/bin/claude-fast.js | grep API_KEY</code></li>
-        <li>微信 token 过期了吗？需要重新扫码</li>
+        <li>ANTHROPIC_API_KEY 设置了吗？<code>echo $ANTHROPIC_API_KEY</code></li>
+        <li>微信 token 过期了吗？需要重新扫码（第 5 步）</li>
+        <li>config.toml 填对了吗？<code>cat ~/.cc-connect/config.toml</code></li>
       </ol>
     </div>
   </div>
   <div class="step">
     <div class="step-header" onclick="this.parentElement.classList.toggle('open')"><span class="step-num" style="background:#5a5a78">Q</span><span class="step-title">回复很慢？</span></div>
     <div class="step-body">
-      <p>首条 5-30 秒正常。后续 3-10 秒。持续慢：精简 CLAUDE.md、检查网络。</p>
+      <p>首条 5-30 秒正常（加载 700+ 行 CLAUDE.md）。后续 3-10 秒。持续慢：精简 CLAUDE.md、检查网络、换 <code>deepseek-chat</code> 模型。</p>
     </div>
   </div>
   <div class="step">
     <div class="step-header" onclick="this.parentElement.classList.toggle('open')"><span class="step-num" style="background:#5a5a78">Q</span><span class="step-title">怎么换 AI？</span></div>
     <div class="step-body">
-      <p>改 <code>~/bin/claude-fast.js</code> 里的 <code>API_KEY</code>、<code>BASE_URL</code>、<code>MODEL</code>。兼容 OpenAI 格式的 API 都可以。</p>
+      <p>改 <code>~/.bashrc</code> 里的 <code>ANTHROPIC_API_KEY</code> 和 <code>ANTHROPIC_BASE_URL</code>（如需）。兼容 OpenAI 格式的 API 都可以。</p>
     </div>
   </div>
   <div class="step">
     <div class="step-header" onclick="this.parentElement.classList.toggle('open')"><span class="step-num" style="background:#5a5a78">Q</span><span class="step-title">怎么改机器人性格？</span></div>
-    <div class="step-body"><p>编辑 <code>~/cc-connect/CLAUDE.md</code>，改完保存即可，无需重启。</p></div>
+    <div class="step-body"><p>编辑 <code>~/cc-connect/CLAUDE.md</code>，改完保存即可，无需重启。也可以创建自己的 Skill 目录放到 <code>~/.claude/skills/</code>。</p></div>
+  </div>
+  <div class="step">
+    <div class="step-header" onclick="this.parentElement.classList.toggle('open')"><span class="step-num" style="background:#5a5a78">Q</span><span class="step-title">Android 14+ ADB run-as 报 Permission denied？</span></div>
+    <div class="step-body">
+      <p>Android 14 起 SELinux 限制导致 <code>run-as</code> 无法执行命令。只能在手机 Termux 里手动输入命令。ADB 可以用来推送文件到 <code>/sdcard/</code>，然后手机 Termux 里 <code>cp</code> 到目标位置。</p>
+    </div>
   </div>
 </div>
 
@@ -989,21 +907,29 @@ termux-wake-lock release</code></pre>
     <div><span class="dir">手机 ~/</span></div>
     <div style="padding-left:20px"><span class="dir">├── bin/</span></div>
     <div style="padding-left:40px"><span class="file">│   ├── cc-connect</span>          <span class="comment">← 消息桥接器</span></div>
-    <div style="padding-left:40px"><span class="file">│   └── claude-fast.js</span>      <span class="comment">← AI 桥接脚本</span></div>
+    <div style="padding-left:40px"><span class="file">│   └── claude-fast.js</span>      <span class="comment">← AI 桥接脚本（v8）</span></div>
     <div style="padding-left:20px"><span class="dir">├── cc-connect/</span></div>
-    <div style="padding-left:40px"><span class="file">│   └── CLAUDE.md</span>            <span class="comment">← 系统人设</span></div>
+    <div style="padding-left:40px"><span class="file">│   └── CLAUDE.md</span>            <span class="comment">← 系统人设（700+ 行）</span></div>
+    <div style="padding-left:20px"><span class="dir">├── pocket-wechat-bot/</span>      <span class="comment">← 克隆的仓库（日常 git pull）</span></div>
+    <div style="padding-left:40px"><span class="file">│   ├── CLAUDE.md</span></div>
+    <div style="padding-left:40px"><span class="file">│   ├── claude-fast.js</span></div>
+    <div style="padding-left:40px"><span class="dir">│   ├── config/</span></div>
+    <div style="padding-left:40px"><span class="dir">│   ├── docs/</span></div>
+    <div style="padding-left:40px"><span class="dir">│   ├── scripts/</span></div>
+    <div style="padding-left:40px"><span class="dir">│   └── skills/</span></div>
+    <div style="padding-left:20px"><span class="dir">├── proot-fs/</span></div>
+    <div style="padding-left:40px"><span class="dir">│   └── etc/</span></div>
+    <div style="padding-left:60px"><span class="file">│       ├── resolv.conf</span>      <span class="comment">← DNS</span></div>
+    <div style="padding-left:60px"><span class="dir">│       └── ssl/</span>             <span class="comment">← TLS 证书</span></div>
+    <div style="padding-left:20px"><span class="dir">├── .claude/</span></div>
+    <div style="padding-left:40px"><span class="dir">│   └── skills/</span></div>
+    <div style="padding-left:60px"><span class="dir">│       └── nene/</span>            <span class="comment">← 人格数据</span></div>
     <div style="padding-left:20px"><span class="file">├── start-nene.sh</span>            <span class="comment">← 启动脚本</span></div>
-    <div style="padding-left:20px"><span class="file">├── nene.log</span>                 <span class="comment">← 运行日志</span></div>
+    <div style="padding-left:20px"><span class="file">├── nene.log</span>                 <span class="comment">← 运行日志（tmux 方式无此文件）</span></div>
     <div style="padding-left:20px"><span class="dir">└── .cc-connect/</span></div>
     <div style="padding-left:40px"><span class="file">    └── config.toml</span>          <span class="comment">← cc-connect 配置</span></div>
     <br>
     <div><span class="file">/usr/bin/claude</span> → <span class="file">~/bin/claude-fast.js</span>  <span class="comment">← 包装器</span></div>
-    <br>
-    <div style="color:#9090b0">电脑上（ADB 方式，方便后续编辑）：</div>
-    <div style="padding-left:20px"><span class="file">├── claude-fast.js</span></div>
-    <div style="padding-left:20px"><span class="file">├── CLAUDE.md</span></div>
-    <div style="padding-left:20px"><span class="file">├── config.toml</span></div>
-    <div style="padding-left:20px"><span class="file">└── start-nene.sh</span></div>
   </div>
 </div>
 
@@ -1050,7 +976,7 @@ termux-wake-lock release</code></pre>
       <span class="step-title">ADB 方式不能完全替代手机操作</span>
     </div>
     <div class="step-body">
-      <p>ADB 的 <code>run-as</code> 环境缺少 Termux 的完整 PATH，<code>proot</code>、<code>bash</code> 等命令可能找不到。遇到 <code>command not found</code> 时，必须在手机 Termux 里手动执行对应命令。</p>
+      <p>ADB 的 <code>run-as</code> 环境缺少 Termux 的完整 PATH，<code>proot</code>、<code>bash</code> 等命令可能找不到。Android 14+ 更是直接禁止 <code>run-as</code> 执行命令。遇到 <code>command not found</code> 或 <code>Permission denied</code> 时，必须在手机 Termux 里手动执行对应命令。</p>
       <p>而且每次重启手机后 USB 调试可能自动关闭，需要重新连电脑授权。</p>
     </div>
   </div>
@@ -1062,7 +988,7 @@ termux-wake-lock release</code></pre>
     </div>
     <div class="step-body">
       <p>DeepSeek 服务偶尔不稳定（超时、500 错误、模型繁忙）。表现为消息发出去很久没回，或者回复「解析失败」。</p>
-      <p><strong>应对：</strong>等几分钟重试。或者换一个 API 供应商（改 <code>claude-fast.js</code> 里的 <code>BASE_URL</code> 和 <code>API_KEY</code>）。</p>
+      <p><strong>应对：</strong>等几分钟重试。或者换一个 API 供应商（改 <code>~/.bashrc</code> 里的 <code>ANTHROPIC_BASE_URL</code> 和 <code>ANTHROPIC_API_KEY</code>）。</p>
     </div>
   </div>
 
@@ -1072,7 +998,7 @@ termux-wake-lock release</code></pre>
       <span class="step-title">大文件 CLAUDE.md 拉低首次响应速度</span>
     </div>
     <div class="step-body">
-      <p>如果 CLAUDE.md 很大（如 45KB），首次消息需等待 10-30 秒（加载 system prompt + API 首响应）。后续消息因为上下文复用会快很多（3-10 秒），但如果对话太长导致历史被裁剪，下次又会慢。</p>
+      <p>完整 CLAUDE.md 约 45KB，首次消息需等待 10-30 秒（加载 system prompt + API 首响应）。后续消息因为上下文复用会快很多（3-10 秒），但如果对话太长导致历史被裁剪，下次又会慢。</p>
       <p><strong>应对：</strong>精简 CLAUDE.md 到 5-10KB，只保留核心规则。人格细节可以写在外部文件让 AI 自行读取。</p>
     </div>
   </div>
@@ -1102,8 +1028,8 @@ termux-wake-lock release</code></pre>
 <!-- ====== 页脚 ====== -->
 <div style="text-align:center;padding:40px 0 20px;color:#505068;font-size:0.82em">
   <p>cc-connect 微信机器人 · 部署教程</p>
-  <p>项目地址：<a href="https://github.com/chenhg5/cc-connect" style="color:#6060a0">github.com/chenhg5/cc-connect</a></p>
-  <p style="margin-top:8px">更新时间：2026-06-13</p>
+  <p>仓库地址：<a href="https://github.com/99cz99/pocket-wechat-bot" style="color:#6060a0">github.com/99cz99/pocket-wechat-bot</a></p>
+  <p style="margin-top:8px">更新时间：2026-06-14</p>
 </div>
 
 </div><!-- .main -->
