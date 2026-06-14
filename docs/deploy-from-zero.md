@@ -256,6 +256,11 @@ try {
 
   // 注入会话记忆：让重启后的bot知道上次聊了什么
   const affPath = path.join(HOME, '.claude/skills/nene/references/affinity.json');
+
+  // 运行时检查：CLAUDE.md 是否仍含未替换的占位符
+  if (systemPrompt.includes('<YOUR_WECHAT_OPENID>')) {
+    process.stderr.write('claude-fast: WARNING - CLAUDE.md still contains placeholder <YOUR_WECHAT_OPENID>. Admin features will not work.\n');
+  }
   if (fs.existsSync(affPath)) {
     try {
       const aff = JSON.parse(fs.readFileSync(affPath, 'utf-8'));
@@ -276,7 +281,7 @@ try {
         '<!-- SESSION_MEMORY_UPDATE_RULE -->',
         '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `.claude/skills/nene/references/affinity.json`。',
         '需要更新的字段：',
-        '- `last_session`: 改为今天的日期（格式 YYYYY-MM-DD，如 "2026-06-13"）',
+        '- `last_session`: 改为今天的日期（格式 YYYY-MM-DD，如 "2026-06-13"）',
         '- `notes`: 用一两句话记录本轮对话中最值得记住的内容。如果对话很短或只是闲聊，写一句简短概括即可，不要留空。',
         '- `trust_value`: 如果信任有变化则更新数字，无变化则保持不变',
         '- `trust_level`: 如果跨越了层级边界则更新，否则保持不变',
@@ -386,7 +391,7 @@ function executeTool(name, args) {
     const filePath = args.file_path || args.path || '';
     // 安全检查：限制在 HOME 目录内
     const resolved = path.resolve(filePath.startsWith(HOME) ? filePath : path.join(HOME, filePath));
-    if (!resolved.startsWith(HOME) && !resolved.startsWith('/data/data/com.termux/files/home')) {
+    if (!resolved.startsWith(HOME)) {
       return '错误：只允许访问 HOME 目录下的文件';
     }
 
@@ -403,10 +408,16 @@ function executeTool(name, args) {
       case 'Grep': {
         const searchPath = resolved || WORK_DIR;
         const pattern = args.pattern || '';
+        // 安全检查：拒绝真正的 shell 危险字符（防注入）
+        // 仅封堵反引号（命令替换）、$（变量展开）、换行（断句注入）
+        // 单引号字面量上下文中，[ ] ( ) ! ; | & { } < > 均无害
+        if (/[`$\n\r]/.test(pattern) || /[`$\n\r]/.test(searchPath)) {
+          return '错误：搜索模式包含不安全的字符';
+        }
         // 安全转义：单引号包裹，内部单引号用 '\'' 转义
         const escPattern = pattern.replace(/'/g, "'\\''");
         const escPath = searchPath.replace(/'/g, "'\\''");
-        const cmd = `grep -rn --include='*.md' --include='*.json' --include='*.js' --include='*.toml' -E '${escPattern}' '${escPath}' 2>/dev/null | head -30`;
+        const cmd = `grep -rnI -E '${escPattern}' '${escPath}' 2>/dev/null | head -30`;
         try {
           return execSync(cmd, { encoding: 'utf-8', timeout: 5000, cwd: WORK_DIR }) || '无匹配结果';
         } catch (e) {
@@ -416,9 +427,32 @@ function executeTool(name, args) {
       case 'Glob': {
         const searchPath = resolved || WORK_DIR;
         const pattern = args.pattern || '**/*';
+        // 安全检查：拒绝真正的 shell 危险字符（防注入）
+        // 仅封堵反引号（命令替换）、$（变量展开）、换行（断句注入）
+        // 单引号字面量上下文中，[ ] ( ) ! ; | & { } < > 均无害
+        if (/[`$\n\r]/.test(pattern) || /[`$\n\r]/.test(searchPath)) {
+          return '错误：搜索模式包含不安全的字符';
+        }
         const escPattern = pattern.replace(/'/g, "'\\''");
         const escPath = searchPath.replace(/'/g, "'\\''");
-        const cmd = `find '${escPath}' -path '${escPath}/${escPattern}' -type f 2>/dev/null | head -20`;
+        // find -path 不支持 ** 通配符 — 转换为 find -regex 兼容形式
+        let findExpr;
+        if (pattern.includes('**')) {
+          // ** glob → regex: **/ → (.*/)*  **$ → .*  * → [^/]*  ? → [^/]
+          const PH = { SL: '\x00SL\x00', ST: '\x00ST\x00' };
+          let regex = pattern
+            .replace(/[.+^${}()|[\]\\]/g, '\\$&')   // 转义 regex 特殊字符（保留 * ?）
+            .replace(/\*\*\//g, PH.SL)               // **/ → placeholder
+            .replace(/\*\*$/g, '.*')                  // **$ → .*
+            .replace(/\*\*/g, '.*')                   // 孤立 ** → .*
+            .replace(/\*/g, '[^/]*')                  // * → 单级匹配
+            .replace(/\?/g, '[^/]')                   // ? → 单字符
+            .replace(new RegExp(PH.SL, 'g'), '(.*/)*'); // placeholder → 零或多级目录
+          findExpr = `-regex '.*/${regex}' -type f`;
+        } else {
+          findExpr = `-path '${escPath}/${escPattern}' -type f`;
+        }
+        const cmd = `find '${escPath}' ${findExpr} 2>/dev/null | head -20`;
         try {
           return execSync(cmd, { encoding: 'utf-8', timeout: 5000, cwd: WORK_DIR }) || '无匹配文件';
         } catch (e) {
@@ -520,7 +554,16 @@ function callAPIStream(history, callback, round) {
       try {
         const json = JSON.parse(data);
         const msg = json.choices?.[0]?.message;
-        if (!msg) { callback(null, ''); return; }
+        if (!msg) {
+          const errMsg = json.error?.message || '';
+          if (errMsg) {
+            process.stderr.write('claude-fast: API error: ' + errMsg + '\n');
+            callback(null, '（API 错误：' + errMsg + '）');
+          } else {
+            callback(null, '');
+          }
+          return;
+        }
 
         // 检查是否有工具调用
         const toolCalls = msg.tool_calls;
@@ -600,7 +643,7 @@ function callAPISimple(history, callback) {
         updateAffinityAuto();
         callback(null, text);
       } catch (e) {
-        callback(null, '');
+        callback(null, '（解析失败: ' + e.message + '）');
       }
     });
   });
@@ -774,17 +817,23 @@ if [ -z "$ANTHROPIC_API_KEY" ]; then
   exit 1
 fi
 
-# 检查 proot SSL 证书目录
+# 检查/创建 proot SSL 证书目录
 if [ ! -d "$HOME/proot-fs/etc/ssl" ] || [ -z "$(ls -A "$HOME/proot-fs/etc/ssl" 2>/dev/null)" ]; then
-    echo "[!] proot SSL 证书目录不存在或为空: $HOME/proot-fs/etc/ssl"
-    echo "    请先运行: mkdir -p ~/proot-fs/etc/ssl && cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/"
-    echo "    如果 tls/ 目录也不存在，请安装 ca-certificates: pkg install ca-certificates -y"
-    exit 1
+    echo "[*] 正在设置 SSL 证书..."
+    mkdir -p "$HOME/proot-fs/etc/ssl"
+    if [ -d "/data/data/com.termux/files/usr/etc/tls" ] && [ -n "$(ls -A /data/data/com.termux/files/usr/etc/tls 2>/dev/null)" ]; then
+        cp -r /data/data/com.termux/files/usr/etc/tls/* "$HOME/proot-fs/etc/ssl/"
+        echo "[*] SSL 证书已复制"
+    else
+        echo "[!] Termux TLS 目录不存在或为空，请运行: pkg install ca-certificates -y"
+        exit 1
+    fi
 fi
 
 # DNS 修复：Android 不走 /etc/resolv.conf，Go 二进制需要它
+# DNS 值与此仓库 scripts/termux-resolv.conf 模板保持同步；海外用户可改 8.8.8.8 / 1.1.1.1
 RESOLV_CONF="/data/local/tmp/resolv.conf"
-if [ ! -f "$RESOLV_CONF" ]; then
+if [ ! -s "$RESOLV_CONF" ]; then
     echo "[*] 写入 DNS 配置到 $RESOLV_CONF ..."
     echo "nameserver 114.114.114.114" > "$RESOLV_CONF" 2>/dev/null || {
         echo "[!] 无法写入 $RESOLV_CONF（Android 11+ 权限限制）"
@@ -797,8 +846,11 @@ fi
 
 # 防止 Android 杀后台
 if command -v termux-wake-lock > /dev/null 2>&1; then
-    termux-wake-lock 2>/dev/null
-    echo "[*] wake-lock 已激活"
+    if termux-wake-lock 2>/dev/null; then
+        echo "[*] wake-lock 已激活"
+    else
+        echo "[!] wake-lock 失败，Android 可能杀后台"
+    fi
 fi
 
 echo ""
@@ -826,14 +878,26 @@ if [ -f "$LOCK" ]; then
         rm -f "$LOCK"
         echo "[*] 旧实例已停止"
     else
-        echo "[!] 无法停止旧实例，请手动检查: pgrep -f cc-connect"
-        echo "    如果旧实例已不存在，手动删除锁文件: rm -f $LOCK"
-        exit 1
+        # --force 失败：检查是否还有 cc-connect 进程在跑
+        if pgrep -f cc-connect > /dev/null 2>&1; then
+            echo "[!] 无法停止旧实例，请手动检查: pgrep -f cc-connect 或 ps aux | grep cc-connect"
+            exit 1
+        else
+            echo "[*] 未检测到 cc-connect 进程，清理残留锁文件"
+            rm -f "$LOCK"
+        fi
     fi
     sleep 1
 fi
 
 echo "[*] 启动中..."
+
+# 预检：确保 cc-connect 二进制存在
+if [ ! -x "$HOME/bin/cc-connect" ]; then
+    echo "[!] 未找到 $HOME/bin/cc-connect"
+    echo "    请先下载 cc-connect 二进制到 ~/bin/"
+    exit 1
+fi
 
 SSL_CERT_FILE=/data/data/com.termux/files/usr/etc/tls/cert.pem \
 proot \
@@ -844,7 +908,7 @@ proot \
   -b /apex/com.android.runtime:/apex/com.android.runtime \
   -b /dev:/dev \
   -b /proc:/proc \
-  /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" PATH=/usr/bin:/usr/local/bin:/home/bin \
+  /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" SSL_CERT_FILE="$SSL_CERT_FILE" PATH=/usr/bin:/usr/local/bin:/home/bin \
   $HOME/bin/cc-connect --config "$CONFIG" &
 CC_PID=$!
 

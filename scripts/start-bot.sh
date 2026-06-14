@@ -37,8 +37,11 @@ fi
 
 # 防止 Android 杀后台
 if command -v termux-wake-lock > /dev/null 2>&1; then
-    termux-wake-lock 2>/dev/null
-    echo "[*] wake-lock 已激活"
+    if termux-wake-lock 2>/dev/null; then
+        echo "[*] wake-lock 已激活"
+    else
+        echo "[!] wake-lock 失败，Android 可能杀后台"
+    fi
 fi
 
 echo ""
@@ -66,14 +69,26 @@ if [ -f "$LOCK" ]; then
         rm -f "$LOCK"
         echo "[*] 旧实例已停止"
     else
-        echo "[!] 无法停止旧实例，请手动检查: pgrep -f cc-connect 或 ps aux | grep cc-connect"
-        echo "    如果旧实例已不存在，手动删除锁文件: rm -f $LOCK"
-        exit 1
+        # --force 失败：检查是否还有 cc-connect 进程在跑
+        if pgrep -f cc-connect > /dev/null 2>&1; then
+            echo "[!] 无法停止旧实例，请手动检查: pgrep -f cc-connect 或 ps aux | grep cc-connect"
+            exit 1
+        else
+            echo "[*] 未检测到 cc-connect 进程，清理残留锁文件"
+            rm -f "$LOCK"
+        fi
     fi
     sleep 1
 fi
 
 echo "[*] 启动中..."
+
+# 预检：确保 cc-connect 二进制存在
+if [ ! -x "$HOME/bin/cc-connect" ]; then
+    echo "[!] 未找到 $HOME/bin/cc-connect"
+    echo "    请先下载 cc-connect 二进制到 ~/bin/"
+    exit 1
+fi
 
 SSL_CERT_FILE=/data/data/com.termux/files/usr/etc/tls/cert.pem \
 proot \
@@ -84,7 +99,7 @@ proot \
   -b /apex/com.android.runtime:/apex/com.android.runtime \
   -b /dev:/dev \
   -b /proc:/proc \
-  /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" PATH=/usr/bin:/usr/local/bin:/home/bin \
+  /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" SSL_CERT_FILE="$SSL_CERT_FILE" PATH=/usr/bin:/usr/local/bin:/home/bin \
   $HOME/bin/cc-connect --config "$CONFIG" &
 CC_PID=$!
 

@@ -49,7 +49,7 @@ try {
         '<!-- SESSION_MEMORY_UPDATE_RULE -->',
         '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `.claude/skills/nene/references/affinity.json`。',
         '需要更新的字段：',
-        '- `last_session`: 改为今天的日期（格式 YYYYY-MM-DD，如 "2026-06-13"）',
+        '- `last_session`: 改为今天的日期（格式 YYYY-MM-DD，如 "2026-06-13"）',
         '- `notes`: 用一两句话记录本轮对话中最值得记住的内容。如果对话很短或只是闲聊，写一句简短概括即可，不要留空。',
         '- `trust_value`: 如果信任有变化则更新数字，无变化则保持不变',
         '- `trust_level`: 如果跨越了层级边界则更新，否则保持不变',
@@ -322,7 +322,16 @@ function callAPIStream(history, callback, round) {
       try {
         const json = JSON.parse(data);
         const msg = json.choices?.[0]?.message;
-        if (!msg) { callback(null, ''); return; }
+        if (!msg) {
+          const errMsg = json.error?.message || '';
+          if (errMsg) {
+            process.stderr.write('claude-fast: API error: ' + errMsg + '\n');
+            callback(null, '（API 错误：' + errMsg + '）');
+          } else {
+            callback(null, '');
+          }
+          return;
+        }
 
         // 检查是否有工具调用
         const toolCalls = msg.tool_calls;
