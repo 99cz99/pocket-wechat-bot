@@ -2,7 +2,7 @@
 
 export PATH="$HOME/bin:$PATH"
 
-# 填入你的 API Key（sk-ant-... 或 sk-...）
+# 填入你的 DeepSeek API Key（sk-...）
 # export ANTHROPIC_API_KEY=sk-your-key-here  # ← 改成你的 key 后去掉行首的 #
 
 # cc-connect wrapper — 修复 Android DNS / SSL 问题

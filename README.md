@@ -54,7 +54,7 @@ https://github.com/99cz99/pocket-wechat-bot.git
 # 请确保手机剩余存储空间 > 1GB（运行 df -h ~ 查看）
 # 如果下载慢，先切国内镜像：termux-change-repo（选 mirrors.ustc.edu.cn 或 mirrors.tuna.tsinghua.edu.cn）
 pkg update && pkg upgrade -y
-pkg install proot nodejs git curl termux-api ca-certificates tmux bash -y
+pkg install proot nodejs git curl termux-api ca-certificates tmux bash nano procps openssl-tool -y
 # 验证: node --version（应 v20+）、git --version、which proot
 ```
 
@@ -78,11 +78,10 @@ cd pocket-wechat-bot
 ### 4. 准备 proot 环境
 
 ```bash
-# proot 需要 DNS 和 SSL 证书，从 Termux 复制
+# proot 需要 SSL 证书
 mkdir -p ~/proot-fs/etc/ssl
-cp /data/data/com.termux/files/usr/etc/resolv.conf /data/local/tmp/resolv.conf
 cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/
-# start-bot.sh 会自动管理 /data/local/tmp/resolv.conf，这里只是首次创建
+# DNS 由 start-bot.sh 自动写入 /data/local/tmp/resolv.conf，无需手动创建
 ```
 
 ### 5. 配置
@@ -120,14 +119,14 @@ source ~/.bashrc
 
 ```bash
 # 人格文件和系统提示词
-cp -r skills/nene ~/.claude/skills/
-cp CLAUDE.md ~/cc-connect/CLAUDE.md
+cp -r ~/pocket-wechat-bot/skills/nene ~/.claude/skills/
+cp ~/pocket-wechat-bot/CLAUDE.md ~/cc-connect/CLAUDE.md
 
 # ⚠️ 必须编辑！替换 <YOUR_WECHAT_OPENID> 为你的微信 OpenID（通过 /whoami 获取）
 nano ~/cc-connect/CLAUDE.md
 
 # 启动脚本
-cp scripts/start-bot.sh ~/start-nene.sh
+cp ~/pocket-wechat-bot/scripts/start-bot.sh ~/start-nene.sh
 # 验证: ls ~/cc-connect/CLAUDE.md ~/.cc-connect/config.toml ~/start-nene.sh
 ```
 
@@ -144,7 +143,7 @@ EOF
 chmod +x /data/data/com.termux/files/usr/bin/claude
 
 # 安装 claude-fast.js
-cp claude-fast.js ~/bin/claude-fast.js
+cp ~/pocket-wechat-bot/claude-fast.js ~/bin/claude-fast.js
 # 验证: node -c ~/bin/claude-fast.js（无输出=语法正确）
 ```
 

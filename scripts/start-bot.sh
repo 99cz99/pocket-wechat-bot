@@ -8,18 +8,23 @@ if [ -z "$ANTHROPIC_API_KEY" ]; then
   exit 1
 fi
 
-# 检查 proot SSL 证书目录
+# 检查/创建 proot SSL 证书目录
 if [ ! -d "$HOME/proot-fs/etc/ssl" ] || [ -z "$(ls -A "$HOME/proot-fs/etc/ssl" 2>/dev/null)" ]; then
-    echo "[!] proot SSL 证书目录不存在或为空: $HOME/proot-fs/etc/ssl"
-    echo "    请先运行: mkdir -p ~/proot-fs/etc/ssl && cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/"
-    echo "    如果 tls/ 目录也不存在，请安装 ca-certificates: pkg install ca-certificates -y"
-    exit 1
+    echo "[*] 正在设置 SSL 证书..."
+    mkdir -p "$HOME/proot-fs/etc/ssl"
+    if [ -d "/data/data/com.termux/files/usr/etc/tls" ] && [ -n "$(ls -A /data/data/com.termux/files/usr/etc/tls 2>/dev/null)" ]; then
+        cp -r /data/data/com.termux/files/usr/etc/tls/* "$HOME/proot-fs/etc/ssl/"
+        echo "[*] SSL 证书已复制"
+    else
+        echo "[!] Termux TLS 目录不存在或为空，请运行: pkg install ca-certificates -y"
+        exit 1
+    fi
 fi
 
 # DNS 修复：Android 不走 /etc/resolv.conf，Go 二进制需要它
 # DNS 值与此仓库 scripts/termux-resolv.conf 模板保持同步；海外用户可改 8.8.8.8 / 1.1.1.1
 RESOLV_CONF="/data/local/tmp/resolv.conf"
-if [ ! -f "$RESOLV_CONF" ]; then
+if [ ! -s "$RESOLV_CONF" ]; then
     echo "[*] 写入 DNS 配置到 $RESOLV_CONF ..."
     echo "nameserver 114.114.114.114" > "$RESOLV_CONF" 2>/dev/null || {
         echo "[!] 无法写入 $RESOLV_CONF（Android 11+ 权限限制）"
@@ -61,7 +66,7 @@ if [ -f "$LOCK" ]; then
         rm -f "$LOCK"
         echo "[*] 旧实例已停止"
     else
-        echo "[!] 无法停止旧实例，请手动检查: pgrep -f cc-connect"
+        echo "[!] 无法停止旧实例，请手动检查: pgrep -f cc-connect 或 ps aux | grep cc-connect"
         echo "    如果旧实例已不存在，手动删除锁文件: rm -f $LOCK"
         exit 1
     fi
@@ -81,12 +86,13 @@ proot \
   -b /proc:/proc \
   /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" PATH=/usr/bin:/usr/local/bin:/home/bin \
   $HOME/bin/cc-connect --config "$CONFIG" &
+CC_PID=$!
 
 sleep 2
 
 # 健康检查
-if pgrep -f cc-connect > /dev/null 2>&1; then
-    echo "[*] cc-connect 进程已启动 (PID: $(pgrep -f cc-connect | head -1))"
+if kill -0 "$CC_PID" 2>/dev/null; then
+    echo "[*] cc-connect 进程已启动 (PID: $CC_PID)"
     echo "[*] 管理面板: http://127.0.0.1:9820"
     echo "[*] 已启动~"
 else

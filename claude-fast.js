@@ -24,6 +24,11 @@ try {
 
   // 注入会话记忆：让重启后的bot知道上次聊了什么
   const affPath = path.join(HOME, '.claude/skills/nene/references/affinity.json');
+
+  // 运行时检查：CLAUDE.md 是否仍含未替换的占位符
+  if (systemPrompt.includes('<YOUR_WECHAT_OPENID>')) {
+    process.stderr.write('claude-fast: WARNING - CLAUDE.md still contains placeholder <YOUR_WECHAT_OPENID>. Admin features will not work.\n');
+  }
   if (fs.existsSync(affPath)) {
     try {
       const aff = JSON.parse(fs.readFileSync(affPath, 'utf-8'));
@@ -171,14 +176,16 @@ function executeTool(name, args) {
       case 'Grep': {
         const searchPath = resolved || WORK_DIR;
         const pattern = args.pattern || '';
-        // 安全检查：拒绝 shell 元字符（防注入）
-        if (/[`$();|&{}[\]<>!\n\r]/.test(pattern) || /[`$();|&{}[\]<>!\n\r]/.test(searchPath)) {
+        // 安全检查：拒绝真正的 shell 危险字符（防注入）
+        // 仅封堵反引号（命令替换）、$（变量展开）、换行（断句注入）
+        // 单引号字面量上下文中，[ ] ( ) ! ; | & { } < > 均无害
+        if (/[`$\n\r]/.test(pattern) || /[`$\n\r]/.test(searchPath)) {
           return '错误：搜索模式包含不安全的字符';
         }
         // 安全转义：单引号包裹，内部单引号用 '\'' 转义
         const escPattern = pattern.replace(/'/g, "'\\''");
         const escPath = searchPath.replace(/'/g, "'\\''");
-        const cmd = `grep -rn --include='*.md' --include='*.json' --include='*.js' --include='*.toml' -E '${escPattern}' '${escPath}' 2>/dev/null | head -30`;
+        const cmd = `grep -rnI -E '${escPattern}' '${escPath}' 2>/dev/null | head -30`;
         try {
           return execSync(cmd, { encoding: 'utf-8', timeout: 5000, cwd: WORK_DIR }) || '无匹配结果';
         } catch (e) {
@@ -188,24 +195,28 @@ function executeTool(name, args) {
       case 'Glob': {
         const searchPath = resolved || WORK_DIR;
         const pattern = args.pattern || '**/*';
-        // 安全检查：拒绝 shell 元字符（防注入）
-        if (/[`$();|&{}[\]<>!\n\r]/.test(pattern) || /[`$();|&{}[\]<>!\n\r]/.test(searchPath)) {
+        // 安全检查：拒绝真正的 shell 危险字符（防注入）
+        // 仅封堵反引号（命令替换）、$（变量展开）、换行（断句注入）
+        // 单引号字面量上下文中，[ ] ( ) ! ; | & { } < > 均无害
+        if (/[`$\n\r]/.test(pattern) || /[`$\n\r]/.test(searchPath)) {
           return '错误：搜索模式包含不安全的字符';
         }
         const escPattern = pattern.replace(/'/g, "'\\''");
         const escPath = searchPath.replace(/'/g, "'\\''");
-        // find -path 不支持 ** 通配符 — 转换为 find 兼容形式
+        // find -path 不支持 ** 通配符 — 转换为 find -regex 兼容形式
         let findExpr;
         if (pattern.includes('**')) {
-          // 去掉 **/ 前缀，改用 -name 或 -path '*/...'
-          const clean = pattern.replace(/^\*\*\//, '').replace(/\/\*\*\//g, '/');
-          if (clean === '' || clean === '*') {
-            findExpr = `-type f`;
-          } else if (!clean.includes('/')) {
-            findExpr = `-name '${clean.replace(/'/g, "'\\''")}' -type f`;
-          } else {
-            findExpr = `-path '*/${clean.replace(/'/g, "'\\''")}' -type f`;
-          }
+          // ** glob → regex: **/ → (.*/)*  **$ → .*  * → [^/]*  ? → [^/]
+          const PH = { SL: '\x00SL\x00', ST: '\x00ST\x00' };
+          let regex = pattern
+            .replace(/[.+^${}()|[\]\\]/g, '\\$&')   // 转义 regex 特殊字符（保留 * ?）
+            .replace(/\*\*\//g, PH.SL)               // **/ → placeholder
+            .replace(/\*\*$/g, '.*')                  // **$ → .*
+            .replace(/\*\*/g, '.*')                   // 孤立 ** → .*
+            .replace(/\*/g, '[^/]*')                  // * → 单级匹配
+            .replace(/\?/g, '[^/]')                   // ? → 单字符
+            .replace(new RegExp(PH.SL, 'g'), '(.*/)*'); // placeholder → 零或多级目录
+          findExpr = `-regex '.*/${regex}' -type f`;
         } else {
           findExpr = `-path '${escPath}/${escPattern}' -type f`;
         }

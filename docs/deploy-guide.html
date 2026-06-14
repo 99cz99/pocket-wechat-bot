@@ -244,7 +244,7 @@
   <div class="alert alert-tip">
     <span class="alert-icon">✅</span>
     <div><strong>你需要准备：</strong>
-      <br>① 一台 Android 手机（Android 7+）
+      <br>① 一台 Android 手机（Android 7+，arm64，剩余存储 &gt; 1GB）
       <br>② 一个 <a href="https://platform.deepseek.com/" style="color:#a0d0a0">DeepSeek API Key</a>（注册即送额度）
       <br>③ 一个微信小号（用来登录机器人）
       <br>④ [ADB 方式] 电脑 + USB 数据线
@@ -331,13 +331,13 @@ function switchMethod(block, method) {
       </div>
       <div class="method-content method-adb show">
 <pre><code>adb shell "run-as com.termux sh -c 'pkg update && pkg upgrade -y'"
-adb shell "run-as com.termux sh -c 'pkg install nodejs git curl proot tmux termux-api ca-certificates bash -y'"
+adb shell "run-as com.termux sh -c 'pkg install nodejs git curl proot tmux termux-api ca-certificates bash nano procps openssl-tool -y'"
 # 如果下载极慢，先在手机 Termux 里运行 termux-change-repo 切国内镜像</code></pre>
       </div>
       <div class="method-content method-phone">
 <pre><code># 如果下载慢，先运行 termux-change-repo 切国内镜像
 pkg update && pkg upgrade -y
-pkg install nodejs git curl proot tmux termux-api ca-certificates bash -y</code></pre>
+pkg install nodejs git curl proot tmux termux-api ca-certificates bash nano procps openssl-tool -y</code></pre>
       </div>
 
       <div class="alert alert-tip"><span class="alert-icon">💡</span><div>
@@ -665,7 +665,7 @@ echo $ANTHROPIC_API_KEY      # 应显示 sk-...（非空）</code></pre>
 tmux new -s nene
 bash ~/start-nene.sh
 
-# 看到 "cc-connect is running" 后
+# 看到 "[*] cc-connect 进程已启动 (PID: ...)" 后
 # 按 Ctrl+B 然后 D → 断开 tmux，bot 继续跑
 
 # 重新连接查看：tmux attach -t nene</code></pre>
@@ -827,10 +827,10 @@ termux-wake-lock -r</code></pre>
     <div class="step-body">
       <p>日常改配置不用在手机上戳 nano。PC 上改完，adb push 推送：</p>
 <pre><code># PC 上编辑仓库里的 config.toml
-code config\config.toml
+code config/config.toml
 
 # 推送到手机
-adb push config\config.toml /sdcard/Download/config.toml
+adb push config/config.toml /sdcard/Download/config.toml
 adb shell "cat /sdcard/Download/config.toml | run-as com.termux sh -c 'cat > ~/.cc-connect/config.toml'"
 
 # 重启 bot

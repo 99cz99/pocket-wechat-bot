@@ -21,9 +21,11 @@ idle_timeout_mins = 120
     type = "claudecode"
 
     [projects.agent.options]
+      # 允许 AI 调用的工具（需与 claude-fast.js 中定义保持一致）
       allowed_tools = ["Read", "Grep", "Glob", "Write", "Edit"]
-      mode = "acceptEdits"
-      quiet = true
+      mode = "acceptEdits"     # 自动接受 AI 的文件编辑请求
+      quiet = true              # 减少 cc-connect 自身的日志输出
+      # Termux 默认路径；其他 Linux 环境需改为实际路径
       work_dir = "/data/data/com.termux/files/home/cc-connect"
 
   # ---- AI 提供商 ----

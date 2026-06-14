@@ -1,5 +1,7 @@
 # Android 手机部署微信机器人 · 直连 DeepSeek
 
+> **前提**：Android 7.0+（arm64），剩余存储 > 1GB
+
 > **快速方式**：如果已配置好 Termux，直接克隆仓库即可跳过大部分步骤：
 > ```bash
 > git clone https://github.com/99cz99/pocket-wechat-bot.git
@@ -24,7 +26,7 @@
 pkg update && pkg upgrade -y
 # 更新包列表并升级所有包
 
-pkg install nodejs git curl proot termux-api ca-certificates tmux bash -y
+pkg install nodejs git curl proot termux-api ca-certificates tmux bash nano procps openssl-tool -y
 # nodejs          = 跑 claude-fast.js 脚本
 # git             = 拉代码
 # curl            = 下载文件
@@ -217,6 +219,8 @@ idle_timeout_mins = 120
 ## 8. 创建 claude-fast.js
 
 > 💡 **推荐**：直接从克隆的仓库复制，无需手动输入：`cp claude-fast.js ~/bin/`
+>
+> ⚠️ **以下代码为撰写时的参考版本，仓库持续更新可能不同步。请优先使用仓库中的 `claude-fast.js`。**
 >
 > 以下为完整代码供参考。手动创建时贴入：
 
@@ -842,12 +846,13 @@ proot \
   -b /proc:/proc \
   /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" PATH=/usr/bin:/usr/local/bin:/home/bin \
   $HOME/bin/cc-connect --config "$CONFIG" &
+CC_PID=$!
 
 sleep 2
 
 # 健康检查
-if pgrep -f cc-connect > /dev/null 2>&1; then
-    echo "[*] cc-connect 进程已启动 (PID: $(pgrep -f cc-connect | head -1))"
+if kill -0 "$CC_PID" 2>/dev/null; then
+    echo "[*] cc-connect 进程已启动 (PID: $CC_PID)"
     echo "[*] 管理面板: http://127.0.0.1:9820"
     echo "[*] 已启动~"
 else
@@ -876,7 +881,7 @@ bash -n ~/start-nene.sh
 tmux new -s nene
 bash ~/start-nene.sh
 
-# 看到 "cc-connect is running" 后
+# 看到 "[*] cc-connect 进程已启动 (PID: ...)" 后
 # 按 Ctrl+B 然后 D → 断开 tmux，bot 继续跑
 # 重新连接：tmux attach -t nene
 
