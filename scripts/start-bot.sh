@@ -8,6 +8,14 @@ if [ -z "$ANTHROPIC_API_KEY" ]; then
   exit 1
 fi
 
+# DNS 修复：Android 不走 /etc/resolv.conf，Go 二进制需要它
+RESOLV_CONF="/data/local/tmp/resolv.conf"
+if [ ! -f "$RESOLV_CONF" ]; then
+    echo "[*] 写入 DNS 配置到 $RESOLV_CONF ..."
+    echo "nameserver 114.114.114.114" > "$RESOLV_CONF"
+    echo "nameserver 223.5.5.5" >> "$RESOLV_CONF"
+fi
+
 echo ""
 echo "  =============================="
 echo "    nene - cc-connect 微信机器人"
@@ -20,7 +28,7 @@ LOCK="$HOME/.cc-connect/.config.toml.lock"
 if [ -f "$LOCK" ]; then
     echo "[!] 已有实例在运行，先停止..."
     proot \
-      -b $HOME/proot-fs/etc/resolv.conf:/etc/resolv.conf \
+      -b /data/local/tmp/resolv.conf:/etc/resolv.conf \
       -b $HOME/proot-fs/etc/ssl:/etc/ssl \
       -b /data/data/com.termux/files/usr:/usr \
       -b $HOME:/home \
@@ -37,7 +45,7 @@ echo "[*] 启动中..."
 
 SSL_CERT_FILE=/data/data/com.termux/files/usr/etc/tls/cert.pem \
 proot \
-  -b $HOME/proot-fs/etc/resolv.conf:/etc/resolv.conf \
+  -b /data/local/tmp/resolv.conf:/etc/resolv.conf \
   -b $HOME/proot-fs/etc/ssl:/etc/ssl \
   -b /data/data/com.termux/files/usr:/usr \
   -b $HOME:/home \

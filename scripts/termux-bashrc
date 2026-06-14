@@ -1,0 +1,17 @@
+# Termux bashrc for cc-connect
+
+export PATH="$HOME/bin:$PATH"
+
+# 填入你的 API Key（sk-ant-... 或 sk-...）
+export ANTHROPIC_API_KEY=sk-your-key-here
+
+# cc-connect wrapper — 修复 Android DNS / SSL 问题
+alias cc-connect='proot \
+  -b /data/local/tmp/resolv.conf:/etc/resolv.conf \
+  -b $HOME/proot-fs/etc/ssl:/etc/ssl \
+  -b /data/data/com.termux/files/usr:/usr \
+  -b $HOME:/home \
+  -b /apex/com.android.runtime:/apex/com.android.runtime \
+  -b /dev:/dev \
+  -b /proc:/proc \
+  $HOME/bin/cc-connect'
