@@ -3,8 +3,8 @@
 # 复制此文件为 ~/.cc-connect/config.toml 并填入你的信息
 # ============================================================
 
-data_dir = ""
-attachment_send = ""
+data_dir = ""        # 数据目录（留空使用默认路径 ~/.cc-connect/data/）
+attachment_send = "" # 附件发送路径（留空表示禁用）
 language = "zh"
 idle_timeout_mins = 120
 

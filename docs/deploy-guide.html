@@ -331,11 +331,13 @@ function switchMethod(block, method) {
       </div>
       <div class="method-content method-adb show">
 <pre><code>adb shell "run-as com.termux sh -c 'pkg update && pkg upgrade -y'"
-adb shell "run-as com.termux sh -c 'pkg install nodejs git curl proot tmux termux-api ca-certificates -y'"</code></pre>
+adb shell "run-as com.termux sh -c 'pkg install nodejs git curl proot tmux termux-api ca-certificates bash -y'"
+# 如果下载极慢，先在手机 Termux 里运行 termux-change-repo 切国内镜像</code></pre>
       </div>
       <div class="method-content method-phone">
-<pre><code>pkg update && pkg upgrade -y
-pkg install nodejs git curl proot tmux termux-api ca-certificates -y</code></pre>
+<pre><code># 如果下载慢，先运行 termux-change-repo 切国内镜像
+pkg update && pkg upgrade -y
+pkg install nodejs git curl proot tmux termux-api ca-certificates bash -y</code></pre>
       </div>
 
       <div class="alert alert-tip"><span class="alert-icon">💡</span><div>
@@ -350,12 +352,16 @@ pkg install nodejs git curl proot tmux termux-api ca-certificates -y</code></pre
         <button class="method-tab method-tab-phone" onclick="switchMethod(this,'phone')">📱 手机端验证</button>
       </div>
       <div class="method-content method-adb show">
-<pre><code>adb shell "run-as com.termux sh -c 'node --version && git --version && which proot'"</code></pre>
+<pre><code>adb shell "run-as com.termux sh -c 'node --version && git --version && which proot && which curl && which tmux && which termux-wake-lock && ls /data/data/com.termux/files/usr/etc/tls/cert.pem'"</code></pre>
       </div>
       <div class="method-content method-phone">
 <pre><code>node --version    # 应显示 v20.x 或更高
 git --version     # 应显示 git version 2.x
-which proot       # 应显示 /data/.../usr/bin/proot</code></pre>
+which proot       # 应显示 /data/.../usr/bin/proot
+which curl        # 应显示 /data/.../usr/bin/curl
+which tmux        # 应显示 /data/.../usr/bin/tmux
+which termux-wake-lock  # 应显示 /data/.../usr/bin/termux-wake-lock
+ls /data/data/com.termux/files/usr/etc/tls/cert.pem  # 应显示证书路径</code></pre>
       </div>
     </div>
   </div>
@@ -544,7 +550,7 @@ adb shell "run-as com.termux sh -c 'cp -r ~/pocket-wechat-bot/skills/nene ~/.cla
 <pre><code>adb shell "run-as com.termux sh -c 'cp ~/pocket-wechat-bot/config/config.toml.template ~/.cc-connect/config.toml'"</code></pre>
         <p><strong>步骤 C：在电脑上编辑 config.toml</strong>（仓库里已有模板）</p>
         <p>用 VSCode 打开仓库的 <code>config/config.toml.template</code>，改好占位符后<strong>另存为 <code>config.toml</code></strong>（去掉 <code>.template</code> 后缀），然后推送到手机：</p>
-<pre><code>adb push config\config.toml /sdcard/Download/config.toml
+<pre><code>adb push config/config.toml /sdcard/Download/config.toml
 adb shell "cat /sdcard/Download/config.toml | run-as com.termux sh -c 'cat > ~/.cc-connect/config.toml'"</code></pre>
       </div>
       <div class="method-content method-phone">
@@ -561,7 +567,9 @@ nano ~/.cc-connect/config.toml</code></pre>
 <pre><code>admin_from = "&lt;YOUR_WECHAT_OPENID&gt;@im.wechat"   # 先填 "*"，跑起来后发 /whoami 获取再改
 api_key = "&lt;YOUR_DEEPSEEK_API_KEY&gt;"           # DeepSeek API Key
 account_id = "&lt;YOUR_BOT_ACCOUNT_ID&gt;"          # 第 5 步扫码获取的
-token = "&lt;YOUR_BOT_TOKEN&gt;"                    # 第 5 步扫码获取的</code></pre>
+token = "&lt;YOUR_BOT_TOKEN&gt;"                    # 第 5 步扫码获取的
+mgmt_token = "&lt;YOUR_MGMT_TOKEN&gt;"             # 管理面板 token（运行 openssl rand -hex 16 随机生成）
+bridge_token = "&lt;YOUR_BRIDGE_TOKEN&gt;"          # Bridge token（同样随机生成）</code></pre>
 
       <div class="alert alert-warn"><span class="alert-icon">⚠️</span><div><strong>别忘了 CLAUDE.md！</strong>文件里也有 <code>&lt;YOUR_WECHAT_OPENID&gt;</code> 占位符需要替换。在手机 Termux 里执行：<code>nano ~/cc-connect/CLAUDE.md</code>，搜索 <code>YOUR_WECHAT</code> 替换为你的微信 OpenID。不替换的话 admin 身份识别不生效，人格切换功能无法使用。</div></div>
 
@@ -602,7 +610,8 @@ wc -l ~/cc-connect/CLAUDE.md               # 应显示 700+ 行</code></pre>
         <p><strong>步骤 A：复制启动脚本</strong></p>
 <pre><code>adb shell "run-as com.termux sh -c 'cp ~/pocket-wechat-bot/scripts/start-bot.sh ~/start-nene.sh && chmod +x ~/start-nene.sh'"</code></pre>
         <p><strong>步骤 B：设置环境变量</strong></p>
-<pre><code>adb shell "run-as com.termux sh -c 'echo \"export ANTHROPIC_API_KEY=sk-你的key\" >> ~/.bashrc && source ~/.bashrc'"</code></pre>
+<pre><code>adb shell "run-as com.termux sh -c 'echo \"export ANTHROPIC_API_KEY=sk-你的key\" >> ~/.bashrc && source ~/.bashrc'"
+        # 注：source 仅验证语法，环境变量在手机 Termux 新会话中自动加载</code></pre>
       </div>
       <div class="method-content method-phone">
         <p><strong>步骤 A：复制启动脚本</strong></p>
@@ -739,7 +748,7 @@ termux-wake-lock -r</code></pre>
     <li>更新仓库：<code>cd ~/pocket-wechat-bot && git pull</code></li>
     <li>改 CLAUDE.md → <strong>无需重启</strong>，下一轮自动生效</li>
     <li>改 config.toml 或 claude-fast.js → 需要重启</li>
-    <li>重启手机后 → 开 Termux → <code>tmux new -s nene && bash ~/start-nene.sh</code></li>
+    <li>重启手机后 → 开 Termux → <code>tmux new -s nene</code>，然后在 tmux 里运行 <code>bash ~/start-nene.sh</code></li>
     <li>微信 token 过期 → 重新执行第 5 步扫码，更新 config.toml 后重启</li>
   </ul>
 </div>
@@ -923,7 +932,8 @@ adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"
     <div style="padding-left:20px"><span class="dir">├── proot-fs/</span></div>
     <div style="padding-left:40px"><span class="dir">│   └── etc/</span></div>
     <div style="padding-left:60px"><span class="dir">│       └── ssl/</span>             <span class="comment">← TLS 证书</span></div>
-    <div style="padding-left:20px"><span class="file">├── resolv.conf</span>              <span class="comment">← DNS（/data/local/tmp/，脚本自动管理）</span></div>
+    <div style="padding-left:20px"><span class="dir">├── /data/local/tmp/</span></div>
+    <div style="padding-left:40px"><span class="file">│   └── resolv.conf</span>              <span class="comment">← DNS（脚本自动管理）</span></div>
     <div style="padding-left:20px"><span class="dir">├── .claude/</span></div>
     <div style="padding-left:40px"><span class="dir">│   └── skills/</span></div>
     <div style="padding-left:60px"><span class="dir">│       └── nene/</span>            <span class="comment">← 人格数据</span></div>

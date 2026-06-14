@@ -171,6 +171,10 @@ function executeTool(name, args) {
       case 'Grep': {
         const searchPath = resolved || WORK_DIR;
         const pattern = args.pattern || '';
+        // 安全检查：拒绝 shell 元字符（防注入）
+        if (/[`$();|&{}[\]<>!\n\r]/.test(pattern) || /[`$();|&{}[\]<>!\n\r]/.test(searchPath)) {
+          return '错误：搜索模式包含不安全的字符';
+        }
         // 安全转义：单引号包裹，内部单引号用 '\'' 转义
         const escPattern = pattern.replace(/'/g, "'\\''");
         const escPath = searchPath.replace(/'/g, "'\\''");
@@ -184,9 +188,28 @@ function executeTool(name, args) {
       case 'Glob': {
         const searchPath = resolved || WORK_DIR;
         const pattern = args.pattern || '**/*';
+        // 安全检查：拒绝 shell 元字符（防注入）
+        if (/[`$();|&{}[\]<>!\n\r]/.test(pattern) || /[`$();|&{}[\]<>!\n\r]/.test(searchPath)) {
+          return '错误：搜索模式包含不安全的字符';
+        }
         const escPattern = pattern.replace(/'/g, "'\\''");
         const escPath = searchPath.replace(/'/g, "'\\''");
-        const cmd = `find '${escPath}' -path '${escPath}/${escPattern}' -type f 2>/dev/null | head -20`;
+        // find -path 不支持 ** 通配符 — 转换为 find 兼容形式
+        let findExpr;
+        if (pattern.includes('**')) {
+          // 去掉 **/ 前缀，改用 -name 或 -path '*/...'
+          const clean = pattern.replace(/^\*\*\//, '').replace(/\/\*\*\//g, '/');
+          if (clean === '' || clean === '*') {
+            findExpr = `-type f`;
+          } else if (!clean.includes('/')) {
+            findExpr = `-name '${clean.replace(/'/g, "'\\''")}' -type f`;
+          } else {
+            findExpr = `-path '*/${clean.replace(/'/g, "'\\''")}' -type f`;
+          }
+        } else {
+          findExpr = `-path '${escPath}/${escPattern}' -type f`;
+        }
+        const cmd = `find '${escPath}' ${findExpr} 2>/dev/null | head -20`;
         try {
           return execSync(cmd, { encoding: 'utf-8', timeout: 5000, cwd: WORK_DIR }) || '无匹配文件';
         } catch (e) {

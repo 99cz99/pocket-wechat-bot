@@ -14,13 +14,17 @@
 
 去 F-Droid 下载（不要用 Play 版）：https://f-droid.org/packages/com.termux/
 
+另外从 F-Droid 搜索「Termux:API」安装（**必须！** 否则 `termux-wake-lock` 无法工作，Android 会随时杀掉 bot 进程）。
+
 ## 2. 装依赖
 
 ```bash
+# 请确保手机剩余存储空间 > 1GB（运行 df -h ~ 查看）
+# 如果下载慢，先切国内镜像：termux-change-repo（选 mirrors.ustc.edu.cn 或 mirrors.tuna.tsinghua.edu.cn）
 pkg update && pkg upgrade -y
 # 更新包列表并升级所有包
 
-pkg install nodejs git curl proot termux-api ca-certificates tmux -y
+pkg install nodejs git curl proot termux-api ca-certificates tmux bash -y
 # nodejs          = 跑 claude-fast.js 脚本
 # git             = 拉代码
 # curl            = 下载文件
@@ -28,6 +32,7 @@ pkg install nodejs git curl proot termux-api ca-certificates tmux -y
 # termux-api      = 防杀后台（termux-wake-lock）
 # ca-certificates = TLS/SSL 证书（HTTPS 连接必需！）
 # tmux            = 后台常驻（关闭 Termux 窗口进程不中断）
+# bash            = 脚本解释器（默认已装，防御性安装）
 
 node --version
 # 确认 Node.js 装好了，应显示 v20+
@@ -96,6 +101,8 @@ mkdir -p ~/.cc-connect
 nano ~/.cc-connect/config.toml
 # 编辑配置，把下面内容贴进去
 # 注意：改掉所有 <...> 占位符！先填 API Key，token 和 account_id 在下一步获取
+# admin_from 可以先填 "*"，等 bot 跑起来发 /whoami 获取真实 OpenID 后再改
+# MGMT_TOKEN 和 BRIDGE_TOKEN 也要改！运行 openssl rand -hex 16 随机生成
 ```
 
 ```toml

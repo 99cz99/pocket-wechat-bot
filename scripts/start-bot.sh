@@ -17,6 +17,7 @@ if [ ! -d "$HOME/proot-fs/etc/ssl" ] || [ -z "$(ls -A "$HOME/proot-fs/etc/ssl" 2
 fi
 
 # DNS 修复：Android 不走 /etc/resolv.conf，Go 二进制需要它
+# DNS 值与此仓库 scripts/termux-resolv.conf 模板保持同步；海外用户可改 8.8.8.8 / 1.1.1.1
 RESOLV_CONF="/data/local/tmp/resolv.conf"
 if [ ! -f "$RESOLV_CONF" ]; then
     echo "[*] 写入 DNS 配置到 $RESOLV_CONF ..."

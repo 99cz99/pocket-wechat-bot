@@ -21,7 +21,7 @@
 
 ## 特性
 
-- **手机即主机**：Android 5.0+，Termux + proot 沙箱，后台常驻
+- **手机即主机**：Android 7.0+（arm64），Termux + proot 沙箱，后台常驻
 - **微信即界面**：在微信里和你的 AI 角色对话，像聊天一样自然
 - **人格系统**：基于 Claude Code Skill 格式的角色定义框架，可热切换
 - **信任阶梯**：六层好感度系统，AI 会根据信任层级调整回应深度
@@ -48,11 +48,13 @@ https://github.com/99cz99/pocket-wechat-bot.git
 
 ### 1. 准备环境
 
-在 Android 手机上安装 [Termux](https://f-droid.org/packages/com.termux/)，然后：
+在 Android 手机上安装 [Termux](https://f-droid.org/packages/com.termux/) 和 **Termux:API**（F-Droid 搜「Termux:API」安装，提供后台保活），然后：
 
 ```bash
+# 请确保手机剩余存储空间 > 1GB（运行 df -h ~ 查看）
+# 如果下载慢，先切国内镜像：termux-change-repo（选 mirrors.ustc.edu.cn 或 mirrors.tuna.tsinghua.edu.cn）
 pkg update && pkg upgrade -y
-pkg install proot nodejs git curl termux-api ca-certificates tmux -y
+pkg install proot nodejs git curl termux-api ca-certificates tmux bash -y
 # 验证: node --version（应 v20+）、git --version、which proot
 ```
 
@@ -90,11 +92,14 @@ cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/
 mkdir -p ~/cc-connect ~/.cc-connect ~/.claude/skills
 
 # 配置文件
-cp config/config.toml.template ~/.cc-connect/config.toml
+cp ~/pocket-wechat-bot/config/config.toml.template ~/.cc-connect/config.toml
 nano ~/.cc-connect/config.toml      # 填入 API Key 和微信凭据
 # ⚠️ token 和 account_id 先留空！下一步获取微信 token 后再回来填
+# ⚠️ admin_from 可以先填 "*"，等 bot 跑起来发 /whoami 获取真实 OpenID 后再改
+# ⚠️ MGMT_TOKEN 和 BRIDGE_TOKEN 也要改！可运行 openssl rand -hex 16 随机生成
 
 # 设置 API Key 环境变量（写入 bashrc 持久化）
+# 提示：命令前加空格可避免进入 bash history（如 HISTCONTROL=ignorespace）
 echo 'export ANTHROPIC_API_KEY=sk-你的key' >> ~/.bashrc
 source ~/.bashrc
 # ⚠️ 虽然变量名是 ANTHROPIC_API_KEY，但请填 DeepSeek API Key！
@@ -150,7 +155,7 @@ cp claude-fast.js ~/bin/claude-fast.js
 tmux new -s nene
 bash ~/start-nene.sh
 
-# 看到 "cc-connect is running" 后
+# 看到 "cc-connect 进程已启动 (PID: ...)" 后
 # 按 Ctrl+B 然后 D → 断开 tmux，bot 继续跑
 # 重新连接：tmux attach -t nene
 # 验证: pgrep -f cc-connect（返回数字=在跑）、tmux ls
