@@ -865,7 +865,7 @@ adb devices
 
 ### 步骤 2：PC 上编辑配置
 
-```bash
+```cmd
 # 首次：从模板创建 config.toml（此文件在 .gitignore 中，不会被提交）
 copy config\config.toml.template config\config.toml
 

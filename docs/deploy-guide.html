@@ -498,7 +498,7 @@ chmod +x ~/bin/claude-fast.js</code></pre>
         <p><strong>步骤 B：创建 /usr/bin/claude 包装器</strong></p>
 <pre><code>cat > /data/data/com.termux/files/usr/bin/claude << 'EOF'
 #!/data/data/com.termux/files/usr/bin/sh
-exec /usr/bin/node /data/data/com.termux/files/home/bin/claude-fast.js "$@"
+exec /usr/bin/node /home/bin/claude-fast.js "$@"
 EOF
 chmod +x /data/data/com.termux/files/usr/bin/claude</code></pre>
       </div>
