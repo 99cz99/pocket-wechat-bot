@@ -241,7 +241,7 @@ function updateAffinityAuto() {
 function sanitize(text) {
   // 移除 Unicode 替换字符（U+FFFD），这些是 API/模型偶发的编码损坏
   // 同时移除其他不可见的控制字符（保留常见空白）
-  return text.replace(/�/g, '').replace(/[ --]/g, '');
+  return text.replace(/�/g, '').replace(/[\x00--]/g, '');
 }
 
 // ====== 输出 ======
