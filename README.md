@@ -36,7 +36,11 @@
 
 ### 一键部署 🚀
 
-USB 连接手机 → 双击 `scripts\deploy.bat` → 跟着提示走。脚本自动完成：环境检查 → 文件推送 → 依赖安装 → 配置生成 → 扫码 → 启动。支持中断续跑（幂等）。
+```bash
+git clone https://github.com/99cz99/pocket-wechat-bot.git
+cd pocket-wechat-bot\scripts
+```
+双击 `deploy.bat` → 跟着提示走。脚本自动完成：环境检查 → 文件推送 → 依赖安装 → 配置生成 → 扫码 → 启动。支持中断续跑（幂等）。
 
 **日常更新**：改了代码或人格文件后，双击 `scripts\update.bat`，30 秒推文件+重启 bot（版本未变自动跳过）。
 
