@@ -125,12 +125,30 @@ Write-Host "  手机端输出："
 Write-Host "----------------------------------------"
 Write-Host ""
 adb shell "run-as com.termux sh -c 'export HOME=/data/data/com.termux/files/home && cd /data/data/com.termux/files/home/pocket-wechat-bot && chmod +x scripts/setup-phone.sh scripts/start-bot.sh && DEPLOY_NONINTERACTIVE=1 ./scripts/setup-phone.sh'"
+$exitCode = $LASTEXITCODE
 Write-Host ""
 Write-Host "----------------------------------------"
-Write-Host "  手机端输出结束"
+Write-Host "  手机端输出结束（退出码: $exitCode）"
 Write-Host "----------------------------------------"
 
 # ----- 收尾 -----
+if ($exitCode -ne 0) {
+    Write-Host ""
+    Write-Host "╔══════════════════════════════════════════════╗"
+    Write-Host "║  部署失败！请查看上方手机端输出定位问题      ║"
+    Write-Host "╚══════════════════════════════════════════════╝"
+    Write-Host ""
+    Write-Host "常见原因："
+    Write-Host "  - 网络问题：手机无法访问 GitHub/DeepSeek"
+    Write-Host "  - 存储不足：手机剩余空间 < 1GB"
+    Write-Host "  - 权限问题：USB 调试授权已过期"
+    Write-Host ""
+    Write-Host "修复后重新运行本脚本即可（支持断点续跑）。"
+    Write-Host ""
+    Pause
+    exit 1
+}
+
 Write-Host ""
 Write-Host "╔══════════════════════════════════════════════╗"
 Write-Host "║  部署完成！还需手动完成以下 3 步：            ║"

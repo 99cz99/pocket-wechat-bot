@@ -225,17 +225,26 @@ step_cc_connect() {
     fi
 
     info "从 GitHub Releases 下载..."
-    curl -L --retry 3 --retry-delay 3 \
+    curl -L --connect-timeout 15 --max-time 120 --retry 2 --retry-delay 5 \
         "https://github.com/chenhg5/cc-connect/releases/latest/download/cc-connect-linux-arm64" \
-        -o "$HOME/bin/cc-connect"
+        -o "$HOME/bin/cc-connect" 2>&1 || true
 
-    chmod +x "$HOME/bin/cc-connect"
+    if [ -s "$HOME/bin/cc-connect" ]; then
+        chmod +x "$HOME/bin/cc-connect"
+    fi
 
-    if "$HOME/bin/cc-connect" --version 2>/dev/null; then
+    if [ -x "$HOME/bin/cc-connect" ] && "$HOME/bin/cc-connect" --version 2>/dev/null; then
         mark_done "cc_connect_binary"
         ok "cc-connect 安装完成"
     else
-        err "cc-connect 安装后无法执行，请检查网络或手动下载"
+        warn "GitHub 下载失败（SSL/网络问题），尝试备用方案..."
+        info "请手动下载 cc-connect 二进制："
+        info "  1. 用手机浏览器打开 https://github.com/chenhg5/cc-connect/releases/latest"
+        info "  2. 下载 cc-connect-linux-arm64"
+        info "  3. 移动到 ~/bin/cc-connect: mv /sdcard/Download/cc-connect-linux-arm64 ~/bin/cc-connect"
+        info "  4. chmod +x ~/bin/cc-connect"
+        info "  5. 重新运行本脚本"
+        err "cc-connect 下载失败，请按上方提示手动操作后重试"
     fi
 }
 
