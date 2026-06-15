@@ -63,13 +63,6 @@ preflight() {
     if [ "${avail:-0}" -lt 512000 ] 2>/dev/null; then
         warn "剩余存储空间不足 500MB（当前 $(($avail/1024))MB），部署可能失败"
         echo "    建议先清理不需要的文件"
-        if [ "$NONINTERACTIVE" = "1" ]; then
-            info "非交互模式，继续..."
-        else
-            echo -ne "    是否继续？[y/N] "
-            read -r ans
-            [ "$ans" != "y" ] && [ "$ans" != "Y" ] && exit 0
-        fi
     else
         ok "存储空间充足（$(($avail/1024))MB）"
     fi
@@ -433,37 +426,15 @@ step_config() {
         cp "$tpl" "$cfg"
     fi
 
-    # 收集需要填入的值
+    # 收集值：环境变量优先，其次从 bashrc 提取
     local api_key="${DEPLOY_API_KEY:-}"
     local openid="${DEPLOY_OPENID:-}"
-    local mgmt_token=""
-    local bridge_token=""
-
-    if [ "$NONINTERACTIVE" = "1" ]; then
-        # 非交互模式：优先使用环境变量，其次从 bashrc 中提取已有的 key
-        if [ -z "$api_key" ]; then
-            api_key=$(grep "ANTHROPIC_API_KEY" "$HOME/.bashrc" 2>/dev/null | tail -1 | sed 's/.*=//' | tr -d '"' | tr -d "'")
-            [ -n "$api_key" ] && info "从 ~/.bashrc 提取到 API Key"
-        fi
-        if [ -z "$api_key" ]; then
-            warn "未提供 API Key，config.toml 将保留占位符（部署后手动编辑即可）"
-        fi
-        mgmt_token=$(openssl rand -hex 16 2>/dev/null || echo "change-me-$(date +%s)")
-        bridge_token=$(openssl rand -hex 16 2>/dev/null || echo "change-me-$(date +%s)")
-    else
-        echo ""
-        echo "  接下来需要填入配置信息。按 Enter 跳过则该项保持占位符（稍后可手动编辑）"
-        echo ""
-
-        echo -ne "  DeepSeek API Key（sk-...）："
-        read -r api_key
-
-        echo -ne "  微信 OpenID（发 /whoami 获取，可先留空填 *）："
-        read -r openid
-
-        mgmt_token=$(openssl rand -hex 16 2>/dev/null || echo "change-me-$(date +%s)")
-        bridge_token=$(openssl rand -hex 16 2>/dev/null || echo "change-me-$(date +%s)")
+    if [ -z "$api_key" ]; then
+        api_key=$(grep "ANTHROPIC_API_KEY" "$HOME/.bashrc" 2>/dev/null | tail -1 | sed 's/.*=//' | tr -d '"' | tr -d "'")
+        [ -n "$api_key" ] && info "从 ~/.bashrc 提取到 API Key"
     fi
+    local mgmt_token=$(openssl rand -hex 16 2>/dev/null || echo "change-me-$(date +%s)")
+    local bridge_token=$(openssl rand -hex 16 2>/dev/null || echo "change-me-$(date +%s)")
 
     # 替换占位符
     [ -n "$api_key" ] && sed -i "s|<YOUR_DEEPSEEK_API_KEY>|$api_key|g" "$cfg"
@@ -482,9 +453,10 @@ step_config() {
         warn "还有 $remaining 个占位符需手动填写："
         grep "<YOUR_" "$cfg" | sed 's/^/      /'
         echo "    编辑: nano $cfg"
+        # 不标记完成——占位符清空才算完成
+    else
+        mark_done "config_toml"
     fi
-
-    mark_done "config_toml"
 }
 
 # ============================================================
@@ -581,8 +553,9 @@ step_wechat() {
     fi
 
     if [ "$NONINTERACTIVE" = "1" ]; then
-        warn "非交互模式：无法扫码，请稍后手动执行："
+        warn "未获取微信凭据，请稍后在手机 Termux 中手动执行："
         echo "     ~/bin/cc-connect weixin setup --project nene"
+        echo "     扫码后 token 和 account_id 会自动填入 config.toml"
         return
     fi
 
@@ -592,11 +565,7 @@ step_wechat() {
     fi
 
     echo ""
-    pause_msg "即将弹出微信扫码二维码。扫码后凭据会自动填入 config.toml。"
-    echo "请准备好微信扫描。"
-    echo -ne "准备好了？[Y/n] "
-    read -r ans
-    [ "$ans" = "n" ] || [ "$ans" = "N" ] && { info "跳过，稍后手动执行：~/bin/cc-connect weixin setup --project nene"; return; }
+    info "即将获取微信凭据。请准备好微信扫描二维码。"
 
     echo ""
     info "正在获取微信凭据（请在手机上扫码）..."
@@ -616,16 +585,16 @@ step_wechat() {
         ok "token 和 account_id 已自动填入 config.toml"
         echo "    token:      $token"
         echo "    account_id: $account_id"
+        mark_done "wechat_setup"
     elif [ -n "$token" ]; then
         sed -i "s|<YOUR_BOT_TOKEN>|$token|g" "$cfg"
         ok "token 已自动填入（account_id 未识别，需手动编辑）"
         echo "    token: $token"
+        # account_id 缺失不标记完成
     else
         warn "未能自动识别凭据。请手动复制上方输出填入："
         echo "    nano $cfg"
     fi
-
-    mark_done "wechat_setup"
 }
 
 # ============================================================
@@ -672,19 +641,17 @@ STARTUP_EOF
 }
 
 # ============================================================
-# Step 11: 启动 bot（tmux）
+# Step 11: 启动 bot
 # ============================================================
 step_launch() {
     section "Step 11: 启动 bot"
 
     if step_done "bot_launched"; then
         skip "bot 已启动（按部署记录）"
-        # 但仍检查运行状态
         if pgrep -f cc-connect >/dev/null 2>&1; then
             ok "cc-connect 正在运行"
         else
-            warn "cc-connect 未运行！可能需要重新启动"
-            echo "     tmux attach -t nene 或 bash ~/start-nene.sh"
+            warn "cc-connect 未运行！请重新部署或手动启动：bash ~/start-nene.sh"
         fi
         return
     fi
@@ -696,60 +663,29 @@ step_launch() {
     if [ ! -x "$HOME/bin/cc-connect" ]; then
         err "cc-connect 不存在，请先完成 Step 2"
     fi
+    # 加载 API Key
     if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-        # 尝试从 bashrc 加载
-        if grep -q "ANTHROPIC_API_KEY" "$HOME/.bashrc" 2>/dev/null; then
-            source "$HOME/.bashrc" 2>/dev/null || true
-        fi
-        if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-            err "未设置 ANTHROPIC_API_KEY，请先完成 Step 8"
+        if grep -q "ANTHROPIC_API_KEY=sk-" "$HOME/.bashrc" 2>/dev/null; then
+            export ANTHROPIC_API_KEY=$(grep "ANTHROPIC_API_KEY" "$HOME/.bashrc" | tail -1 | sed 's/.*=//')
         fi
     fi
-
-    if [ "$NONINTERACTIVE" = "1" ]; then
-        info "非交互模式：直接后台启动（不使用 tmux）"
-        local log_file="$HOME/cc-connect/cc-connect.log"
-        bash "$HOME/start-nene.sh" > "$log_file" 2>&1 &
-        sleep 3
-        if pgrep -f cc-connect >/dev/null 2>&1; then
-            ok "cc-connect 已在后台启动"
-            ok "日志已保存: $log_file"
-            mark_done "bot_launched"
-        else
-            warn "bot 启动失败，检查日志：cat $log_file"
-        fi
+    if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+        warn "未设置 ANTHROPIC_API_KEY，无法启动。请先设置 API Key 再重试"
         return
     fi
 
-    echo ""
-    pause_msg "即将在 tmux 会话中启动 bot。"
-
-    # 检查是否已在 tmux 中
-    if [ -n "${TMUX:-}" ]; then
-        info "检测到已在 tmux 会话中，直接启动..."
-        bash "$HOME/start-nene.sh"
+    # 后台启动
+    local log_file="$HOME/cc-connect/cc-connect.log"
+    info "正在后台启动 cc-connect..."
+    bash "$HOME/start-nene.sh" > "$log_file" 2>&1 &
+    sleep 3
+    if pgrep -f cc-connect >/dev/null 2>&1; then
+        ok "cc-connect 已在后台启动"
+        ok "日志: $log_file"
         mark_done "bot_launched"
-        return
+    else
+        err "bot 启动失败，查看日志：cat $log_file"
     fi
-
-    # 检查是否已有 nene 会话
-    if tmux has-session -t nene 2>/dev/null; then
-        info "tmux 会话 'nene' 已存在"
-        echo "  重新连接: tmux attach -t nene"
-        echo "  或新建:   tmux new -s nene2 && bash ~/start-nene.sh"
-        mark_done "bot_launched"
-        return
-    fi
-
-    echo "  创建 tmux 会话并启动..."
-    tmux new -s nene "bash ~/start-nene.sh; echo ''; echo 'Bot 已停止。按 Enter 关闭...'; read -r _"
-
-    echo ""
-    info "bot 已停止（或你断开了 tmux）。"
-    echo "  重新连接: tmux attach -t nene"
-    echo "  重新启动: tmux new -s nene && bash ~/start-nene.sh"
-
-    mark_done "bot_launched"
 }
 
 # ============================================================
@@ -905,12 +841,7 @@ main() {
     echo ""
     echo "  仓库: $REPO_DIR"
     echo "  状态: $STATE_FILE"
-    echo "  模式: $([ "$NONINTERACTIVE" = "1" ] && echo '非交互' || echo '交互')"
     echo ""
-
-    if [ "$NONINTERACTIVE" = "1" ]; then
-        info "非交互模式：自动执行所有步骤，需要输入的步骤将被跳过"
-    fi
 
     preflight
     cleanup_duplicates
