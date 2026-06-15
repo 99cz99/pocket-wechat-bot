@@ -34,7 +34,21 @@
 
 ## 快速开始
 
-### 无脑部署 🤖
+### 一键部署 🚀（推荐）
+
+**PC 端**：USB 连接手机 → 双击 `scripts\deploy.bat`，搞定。
+
+**手机端**：安装 Termux 后，在 Termux 里跑：
+```bash
+git clone https://github.com/99cz99/pocket-wechat-bot.git
+cd pocket-wechat-bot && bash scripts/setup-phone.sh
+```
+
+脚本自动完成：依赖安装 → 配置生成 → 文件部署 → 启动运行。只需在扫码时拿出微信扫一下。支持中断续跑（幂等）。
+
+> 详细说明见下方手动步骤，或 [部署教程](docs/deploy-guide.html)。
+
+### 无脑部署 🤖（让 AI 帮你）
 
 **把以下链接丢给你的 PC 端 AI，让它帮你搞定一切：**
 
