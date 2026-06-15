@@ -42,26 +42,54 @@ if ($termux -notmatch "com.termux") {
 }
 Write-Host "[*] Termux 已安装"
 
-# ----- 下载 cc-connect（PC 端下载，手机不一定能连 GitHub）-----
-Write-Host "[*] 正在下载 cc-connect（PC 端下载）..."
-$ccBin = "$env:TEMP\cc-connect-linux-arm64"
+# ----- 获取 cc-connect 二进制（PC 自动下载 或 用户手动放到桌面）-----
+Write-Host "[*] 查找 cc-connect 二进制..."
+$ccBin = $null
 $ccUrl = "https://github.com/chenhg5/cc-connect/releases/latest/download/cc-connect-linux-arm64"
-try {
-    Invoke-WebRequest -Uri $ccUrl -OutFile $ccBin -TimeoutSec 60 -ErrorAction Stop
-    Write-Host "[*] cc-connect 下载完成"
-} catch {
-    Write-Host "[!] 下载 cc-connect 失败: $_"
-    Write-Host "    请确认 PC 可以访问 GitHub"
+$desktopFile = [Environment]::GetFolderPath("Desktop") + "\cc-connect-linux-arm64"
+
+# 1) 先检查桌面是否已有
+if (Test-Path $desktopFile) {
+    Write-Host "[*] 检测到桌面文件: $desktopFile"
+    $ccBin = $desktopFile
+}
+# 2) 尝试 PC 自动下载
+if (-not $ccBin) {
+    Write-Host "[*] 尝试自动下载 cc-connect..."
+    $ccBin = "$env:TEMP\cc-connect-linux-arm64"
+    try {
+        Invoke-WebRequest -Uri $ccUrl -OutFile $ccBin -TimeoutSec 60 -ErrorAction Stop
+        Write-Host "[*] 下载完成"
+    } catch {
+        Remove-Item $ccBin -ErrorAction SilentlyContinue
+        $ccBin = $null
+        Write-Host "[!] 自动下载失败（可能是网络问题）"
+    }
+}
+# 3) 都没有 → 指引用户手动下载
+if (-not $ccBin) {
+    Write-Host ""
+    Write-Host "  请手动操作："
+    Write-Host "  1. 浏览器打开:"
+    Write-Host "     https://github.com/chenhg5/cc-connect/releases/latest"
+    Write-Host "  2. 下载 cc-connect-linux-arm64 到桌面"
+    Write-Host "  3. 文件名必须为: cc-connect-linux-arm64"
+    Write-Host "  4. 下载完成后重新运行本脚本"
+    Write-Host ""
     Pause; exit 1
 }
+
 Write-Host "[*] 正在推送 cc-connect 到手机..."
 adb push $ccBin /sdcard/Download/cc-connect-linux-arm64 2>$null
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "[!] 推送失败"
+    Write-Host "[!] 推送失败，请检查 USB 连接"
     Pause; exit 1
 }
 Write-Host "[*] cc-connect 已推送到手机"
-Remove-Item $ccBin -ErrorAction SilentlyContinue
+# 桌面文件保留（用户自己放的），临时文件清理
+if ($ccBin -ne $desktopFile) {
+    Remove-Item $ccBin -ErrorAction SilentlyContinue
+}
 
 # ----- 打包项目 -----
 Write-Host "[*] 正在打包项目文件..."
