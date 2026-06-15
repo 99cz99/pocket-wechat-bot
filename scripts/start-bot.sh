@@ -63,7 +63,7 @@ if [ -f "$LOCK" ]; then
       -b /apex/com.android.runtime:/apex/com.android.runtime \
       -b /dev:/dev \
       -b /proc:/proc \
-      /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" PATH=/usr/bin:/usr/local/bin:/home/bin \
+      /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" GODEBUG=netdns=go PATH=/usr/bin:/usr/local/bin:/home/bin \
       $HOME/bin/cc-connect --config "$CONFIG" --force 2>/dev/null
     if [ $? -eq 0 ]; then
         rm -f "$LOCK"
@@ -91,6 +91,7 @@ if [ ! -x "$HOME/bin/cc-connect" ]; then
 fi
 
 SSL_CERT_FILE=/data/data/com.termux/files/usr/etc/tls/cert.pem \
+GODEBUG=netdns=go \
 proot \
   -b /data/local/tmp/resolv.conf:/etc/resolv.conf \
   -b $HOME/proot-fs/etc/ssl:/etc/ssl \

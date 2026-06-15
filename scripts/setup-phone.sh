@@ -290,6 +290,9 @@ step_proot() {
     else
         ok "DNS 配置已存在"
     fi
+    # 同时写入 proot-fs 供 GODEBUG=netdns=go 使用
+    mkdir -p "$HOME/proot-fs/etc"
+    cp "$resolv" "$HOME/proot-fs/etc/resolv.conf" 2>/dev/null || true
 
     mark_done "proot_env"
     ok "proot 环境配置完成"

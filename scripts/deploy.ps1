@@ -392,6 +392,17 @@ if ($tokenOk) {
 } else {
     Write-Warn "微信凭据未配置"
 
+    # DNS 预检：Go 在 Android 走 netd 而非 /etc/resolv.conf，提前修复
+    Write-Info "检查 proot DNS..."
+    $dnsOk = Test-Termux "timeout 3 /data/data/com.termux/files/usr/bin/nslookup ilinkai.weixin.qq.com 114.114.114.114 >/dev/null 2>&1"
+    if (-not $dnsOk) {
+        Write-Warn "DNS 可能异常，正在修复..."
+        Invoke-Termux "echo 'nameserver 114.114.114.114' > /data/local/tmp/resolv.conf 2>/dev/null; echo 'nameserver 223.5.5.5' >> /data/local/tmp/resolv.conf 2>/dev/null; mkdir -p /data/data/com.termux/files/home/proot-fs/etc; cp /data/local/tmp/resolv.conf /data/data/com.termux/files/home/proot-fs/etc/resolv.conf 2>/dev/null || true" | Out-Null
+        Write-OK "DNS 已修复（114.114.114.114 / 223.5.5.5）"
+    } else {
+        Write-OK "DNS 正常"
+    }
+
     Write-Host ""
     Write-Host "  -----------------------------------------"
     Write-Host "  现在需要拿起手机操作"
@@ -399,7 +410,7 @@ if ($tokenOk) {
     Write-Host ""
     Write-Host "  在手机 Termux 中运行以下命令："
     Write-Host ""
-    Write-Host "    ~/bin/cc-connect weixin setup --project nene"
+    Write-Host "    GODEBUG=netdns=go ~/bin/cc-connect weixin setup --project nene"
     Write-Host ""
     Write-Host "  会显示一个二维码链接。"
     Write-Host "  1. 在手机浏览器打开该链接"
