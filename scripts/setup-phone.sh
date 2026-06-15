@@ -581,13 +581,15 @@ step_launch() {
 
     if [ "$NONINTERACTIVE" = "1" ]; then
         info "非交互模式：直接后台启动（不使用 tmux）"
-        bash "$HOME/start-nene.sh" &
+        local log_file="$HOME/cc-connect/cc-connect.log"
+        bash "$HOME/start-nene.sh" > "$log_file" 2>&1 &
         sleep 3
         if pgrep -f cc-connect >/dev/null 2>&1; then
             ok "cc-connect 已在后台启动"
+            ok "日志已保存: $log_file"
             mark_done "bot_launched"
         else
-            warn "bot 启动失败，检查日志：cat ~/cc-connect/bot-debug.log"
+            warn "bot 启动失败，检查日志：cat $log_file"
         fi
         return
     fi
@@ -719,14 +721,13 @@ main() {
     echo ""
     echo "  后续操作："
     echo "  ─────────"
-    echo "  第1步: 微信给 bot 发 /whoami → 获取你的 OpenID"
-    echo "         然后: nano ~/cc-connect/CLAUDE.md"
-    echo "         找到 <YOUR_WECHAT_OPENID> 替换为你的 OpenID"
-    echo "         不替换的话人格切换等功能不生效（对话不受影响）"
+    echo "  第1步: 微信给 bot 发一条消息（任意内容）"
+    echo "         然后: bash ~/pocket-wechat-bot/scripts/fix-openid.sh"
+    echo "         脚本会自动从日志提取 OpenID 并填入 CLAUDE.md"
     echo ""
     echo "  查看状态:  bash ~/start-nene.sh（前台运行）"
     echo "  重新连接:  tmux attach -t nene"
-    echo "  查看日志:  cat ~/cc-connect/bot-debug.log"
+    echo "  查看日志:  cat ~/cc-connect/cc-connect.log"
     echo "  重启 bot:  pkill -f cc-connect && bash ~/start-nene.sh"
     echo "  管理面板:  http://127.0.0.1:9820"
     echo "  更新项目:  cd ~/pocket-wechat-bot && git pull"
