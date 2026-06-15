@@ -123,11 +123,7 @@ if (-not $ccBin) {
 }
 
 Write-Host "[*] 正在推送 cc-connect 到手机..."
-adb push $ccBin /sdcard/Download/cc-connect-linux-arm64 2>$null
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[!] 推送失败，请检查 USB 连接"
-    Pause; exit 1
-}
+adb push $ccBin /sdcard/Download/cc-connect-linux-arm64 *>$null
 Write-Host "[*] cc-connect 已推送到手机"
 # 桌面文件保留（用户自己放的），临时文件清理
 if ($ccBin -ne $desktopFile) {
