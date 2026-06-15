@@ -34,7 +34,9 @@ section() { echo -e "\n${BOLD}═══ $1 ═══${NC}"; }
 
 # ---- 路径常量 ----
 STATE_FILE="$HOME/.pocket-bot-deploy-state"
-REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -z "${REPO_DIR:-}" ]; then
+    REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
+fi
 TERMUX_USR="/data/data/com.termux/files/usr"
 TERMUX_HOME="/data/data/com.termux/files/home"
 

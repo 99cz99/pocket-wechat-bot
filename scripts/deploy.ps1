@@ -3,8 +3,17 @@
 # 需要: adb + USB 连接 + 手机已装 Termux
 
 $ErrorActionPreference = "Continue"
+
+# UTF-8 控制台编码（避免 adb 输出中文乱码）
+chcp 65001 > $null 2>&1
+$OutputEncoding = [Text.Encoding]::UTF8
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+
 $Repo = Split-Path -Parent $PSScriptRoot
 $Tgz = "$env:TEMP\pwb-deploy.tar"
+# 手机端项目路径
+$PhoneRepo = "/data/data/com.termux/files/home/pocket-wechat-bot"
+$PhoneBash = "/data/data/com.termux/files/usr/bin/bash"
 
 # ============================================================
 # 工具函数
@@ -277,7 +286,7 @@ Write-Info "（这步不需要你操作，稍等...）"
 Write-Host ""
 
 # 运行 setup-phone.sh
-$setupCmd = "run-as com.termux sh -c 'export HOME=/data/data/com.termux/files/home && cd /data/data/com.termux/files/home/pocket-wechat-bot && chmod +x scripts/setup-phone.sh scripts/start-bot.sh && DEPLOY_NONINTERACTIVE=1 ./scripts/setup-phone.sh'"
+$setupCmd = "run-as com.termux sh -c 'export HOME=/data/data/com.termux/files/home && cd $PhoneRepo && chmod +x scripts/setup-phone.sh scripts/start-bot.sh && REPO_DIR=$PhoneRepo DEPLOY_NONINTERACTIVE=1 ./scripts/setup-phone.sh'"
 $setupOutput = adb shell $setupCmd 2>&1
 
 # 解析输出
@@ -360,7 +369,7 @@ $apiKeyVal = Invoke-Termux "grep 'ANTHROPIC_API_KEY' /data/data/com.termux/files
 $apiKeyVal = $apiKeyVal.Trim()
 
 # 运行 step_config
-$cfgCmd = "cd /data/data/com.termux/files/home/pocket-wechat-bot && DEPLOY_API_KEY='$apiKeyVal' /data/data/com.termux/files/usr/bin/bash -c 'source scripts/setup-phone.sh; step_config'"
+$cfgCmd = "cd $PhoneRepo && REPO_DIR='$PhoneRepo' DEPLOY_API_KEY='$apiKeyVal' $PhoneBash -c 'source scripts/setup-phone.sh; step_config'"
 $configOut = Invoke-Termux $cfgCmd
 Write-Host $configOut
 
@@ -481,11 +490,11 @@ echo "回到 PC 按回车继续部署。"
 Write-Step 7 "启动 Bot"
 
 Write-Info "部署启动脚本..."
-$startOut = Invoke-Termux "cd /data/data/com.termux/files/home/pocket-wechat-bot && /data/data/com.termux/files/usr/bin/bash -c 'source scripts/setup-phone.sh; step_startup'"
+$startOut = Invoke-Termux "cd $PhoneRepo && REPO_DIR='$PhoneRepo' $PhoneBash -c 'source scripts/setup-phone.sh; step_startup'"
 Write-Host $startOut
 
 Write-Info "正在启动 cc-connect..."
-$launchOut = Invoke-Termux "cd /data/data/com.termux/files/home/pocket-wechat-bot && /data/data/com.termux/files/usr/bin/bash -c 'source scripts/setup-phone.sh; step_launch'"
+$launchOut = Invoke-Termux "cd $PhoneRepo && REPO_DIR='$PhoneRepo' $PhoneBash -c 'source scripts/setup-phone.sh; step_launch'"
 Write-Host $launchOut
 
 # 验证
@@ -515,7 +524,7 @@ if ($openidOk) {
     do {
         Read-Host "  发完后按回车"
 
-        $fixOut = Invoke-Termux "bash /data/data/com.termux/files/home/pocket-wechat-bot/scripts/fix-openid.sh"
+        $fixOut = Invoke-Termux "$PhoneBash $PhoneRepo/scripts/fix-openid.sh"
         Write-Host $fixOut
 
         $openidOk = Test-Termux "test -f /data/data/com.termux/files/home/cc-connect/CLAUDE.md && ! grep -q '<YOUR_WECHAT_OPENID>' /data/data/com.termux/files/home/cc-connect/CLAUDE.md"
