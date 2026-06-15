@@ -86,6 +86,95 @@ preflight() {
 }
 
 # ============================================================
+# 重复文件 / 旧路径检测 & 清理
+# ============================================================
+cleanup_duplicates() {
+    section "重复文件/旧路径检测"
+
+    local cleaned=0
+    local issues=0
+
+    # 1. 检测重复的 affinity.json
+    local aff_count
+    aff_count=$(find "$HOME" -name "affinity.json" -type f 2>/dev/null | wc -l)
+    if [ "$aff_count" -gt 1 ]; then
+        warn "发现 $aff_count 个 affinity.json（应有 1 个）："
+        find "$HOME" -name "affinity.json" -type f 2>/dev/null | while read -r f; do
+            echo "    $f"
+        done
+        # 保留 cc-connect/references/ 下的，删除其余
+        find "$HOME" -path "*/cc-connect/references/affinity.json" -prune -o -name "affinity.json" -type f -print | while read -r f; do
+            info "  删除多余: $f"
+            rm -f "$f"
+            cleaned=$((cleaned+1))
+        done
+        issues=$((issues+1))
+    else
+        ok "affinity.json（$aff_count 个）"
+    fi
+
+    # 2. 检测 .claude/skills 残留
+    if [ -d "$HOME/.claude/skills" ]; then
+        warn "发现旧路径残留: ~/.claude/skills/"
+        rm -rf "$HOME/.claude/skills" 2>/dev/null
+        rmdir "$HOME/.claude" 2>/dev/null || true
+        ok "已清理 ~/.claude/skills/（旧路径，不再使用）"
+        cleaned=$((cleaned+1))
+        issues=$((issues+1))
+    else
+        ok "无 .claude/skills 残留"
+    fi
+
+    # 3. 检测多余的 skills 复制（非 repo 源也非 ~/skills/）
+    local skills_dirs
+    skills_dirs=$(find "$HOME" -maxdepth 3 -path "*/skills/nene" -type d 2>/dev/null | grep -v "pocket-wechat-bot")
+    local skills_count
+    skills_count=$(echo "$skills_dirs" | grep -c nene 2>/dev/null || echo 0)
+    if [ "$skills_count" -gt 1 ]; then
+        warn "发现多个 skills/nene/ 目录（应有 2 个：repo 源 + 运行时）："
+        echo "$skills_dirs" | while read -r d; do
+            echo "    $d"
+        done
+        # 保留 ~/skills/nene/，删除其余非 repo 副本
+        echo "$skills_dirs" | grep -v "^$HOME/skills" | grep -v "pocket-wechat-bot" | while read -r d; do
+            info "  删除多余: $d"
+            rm -rf "$d"
+            cleaned=$((cleaned+1))
+        done
+        issues=$((issues+1))
+    else
+        ok "skills/nene/ 目录（$skills_count 个副本）"
+    fi
+
+    # 4. 校验关键路径存在
+    local path_ok=1
+    check_path() {
+        if [ ! -e "$1" ] && [ ! -d "$(dirname "$1")" ]; then
+            warn "缺失: $1"
+            path_ok=0
+        fi
+    }
+    # 仅检查已部署后的路径，避免首次部署误报
+    if [ -f "$STATE_FILE" ]; then
+        check_path "$HOME/cc-connect/CLAUDE.md"
+        check_path "$HOME/cc-connect/references"
+        check_path "$HOME/skills/nene/SKILL.md"
+        check_path "$HOME/bin/claude-fast.js"
+        check_path "$TERMUX_USR/bin/claude"
+        check_path "$HOME/.cc-connect/config.toml"
+        if [ "$path_ok" -eq 1 ]; then
+            ok "所有关键路径存在"
+        else
+            issues=$((issues+1))
+        fi
+    fi
+
+    if [ "$issues" -eq 0 ]; then
+        ok "路径检测通过，无异常"
+    fi
+}
+
+# ============================================================
 # Step 1: 安装依赖包
 # ============================================================
 step_pkg() {
@@ -699,6 +788,7 @@ main() {
     fi
 
     preflight
+    cleanup_duplicates
     step_pkg
     step_cc_connect
     step_proot
