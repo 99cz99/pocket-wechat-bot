@@ -440,10 +440,18 @@ function extractUserText(line) {
 // ====== 裁剪历史 ======
 function trimHistory() {
   // 保留 system + 最多 36 条消息（18 轮对话）
+  // 关键：不能把 tool_calls 和对应的 tool 结果切开——否则 API 报错
   const preserveFirst = conversation[0]; // system prompt
   const others = conversation.slice(1);
   if (others.length > 36) {
     const trimmed = others.slice(others.length - 36);
+    // 向后扫描：如果第一条是 tool 消息，向前找到对应的 assistant(tool_calls) 消息
+    while (trimmed.length > 0 && trimmed[0].role === 'tool') {
+      // 从 others 中向前取一条加入 trimmed 头部
+      const idx = others.indexOf(trimmed[0]) - 1;
+      if (idx < 0) break;
+      trimmed.unshift(others[idx]);
+    }
     conversation = [preserveFirst, ...trimmed];
   }
 }
@@ -456,6 +464,26 @@ function refreshSystemPrompt() {
       conversation[0].content = newPrompt;
     }
   } catch (_) {}
+}
+
+// ====== 清理孤立的 tool 消息 ======
+function cleanOrphanTools() {
+  // 如果历史中存在 tool 消息但没有前置的 assistant(tool_calls)，移除它们
+  const cleaned = [conversation[0]]; // 保留 system
+  for (let i = 1; i < conversation.length; i++) {
+    const msg = conversation[i];
+    if (msg.role === 'tool') {
+      // 检查前一条是否是 assistant 且包含 tool_calls
+      const prev = conversation[i - 1];
+      if (prev && prev.role === 'assistant' && prev.tool_calls) {
+        cleaned.push(msg);
+      }
+      // 否则丢弃这个孤立的 tool 消息
+    } else {
+      cleaned.push(msg);
+    }
+  }
+  conversation = cleaned;
 }
 
 // ====== 主循环 ======
@@ -471,6 +499,7 @@ function processLine(line) {
   // 刷新系统 prompt（信任值可能已变化）
   refreshSystemPrompt();
   trimHistory();
+  cleanOrphanTools();
 
   // 添加用户消息到历史
   conversation.push({ role: 'user', content: msg });
