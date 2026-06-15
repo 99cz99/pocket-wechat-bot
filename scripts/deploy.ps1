@@ -33,7 +33,7 @@ Write-Host "[*] ADB 连接正常"
 
 # ----- 检查 Termux -----
 Write-Host "[*] 检查 Termux..."
-$termux = adb shell "pm list packages com.termux" 2>$null
+$termux = adb shell pm list packages 2>&1 | Out-String
 if ($termux -notmatch "com.termux") {
     Write-Host "[!] 手机未安装 Termux，请先在 F-Droid 下载："
     Write-Host "    https://f-droid.org/packages/com.termux/"
