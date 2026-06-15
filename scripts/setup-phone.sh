@@ -410,8 +410,17 @@ step_config() {
     section "Step 7: 配置 config.toml"
 
     if step_done "config_toml"; then
-        skip "config.toml 已生成"
-        return
+        # 复查：旧版可能把带占位符的也标记为完成
+        local cfg="$HOME/.cc-connect/config.toml"
+        local remaining
+        remaining=$(grep -c "<YOUR_" "$cfg" 2>/dev/null || true)
+        if [ "${remaining:-0}" -eq 0 ]; then
+            skip "config.toml 已生成（无占位符）"
+            return
+        fi
+        warn "config.toml 已存在但有 $remaining 个占位符未填，重新生成..."
+        # 清除旧标记，重新走配置流程
+        sed -i '/config_toml/d' "$STATE_FILE" 2>/dev/null || true
     fi
 
     mkdir -p "$HOME/.cc-connect"
@@ -469,8 +478,13 @@ step_apikey() {
     section "Step 8: 设置 API Key 环境变量"
 
     if step_done "api_key_bashrc"; then
-        skip "API Key 环境变量已设置"
-        return
+        # 复查：旧版可能把空 key 也标记为完成
+        if grep -q "ANTHROPIC_API_KEY=sk-" "$HOME/.bashrc" 2>/dev/null; then
+            skip "API Key 环境变量已设置"
+            return
+        fi
+        warn "API Key 标记已完成但未找到有效 key，重新配置..."
+        sed -i '/api_key_bashrc/d' "$STATE_FILE" 2>/dev/null || true
     fi
 
     # 从 config.toml 中提取已填入的 key
@@ -539,8 +553,16 @@ step_wechat() {
     section "Step 9: 微信扫码获取凭据"
 
     if step_done "wechat_setup"; then
-        skip "微信凭据已配置"
-        return
+        # 复查：确认 token 真的有值
+        local cfg="$HOME/.cc-connect/config.toml"
+        local token
+        token=$(grep 'token = ' "$cfg" 2>/dev/null | head -1 | sed 's/.*= "//;s/"//' | tr -d ' ')
+        if [ -n "$token" ] && [ "$token" != "<YOUR_BOT_TOKEN>" ]; then
+            skip "微信凭据已配置"
+            return
+        fi
+        warn "微信凭据标记已完成但 token 无效，重新获取..."
+        sed -i '/wechat_setup/d' "$STATE_FILE" 2>/dev/null || true
     fi
 
     # 检查 token 是否已填入
