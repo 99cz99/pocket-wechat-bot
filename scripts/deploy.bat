@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul 2>nul
 REM deploy.bat — PC 端一键部署 pocket-wechat-bot 到 Android 手机
 REM 用法：USB 连接手机 → 双击此文件
 REM 前置：adb 已安装并在 PATH 中，手机已授权 USB 调试，Termux 已安装
