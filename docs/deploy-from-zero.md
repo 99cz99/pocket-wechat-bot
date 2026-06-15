@@ -744,10 +744,18 @@ node -c ~/bin/claude-fast.js
 
 ## 9. 替换 /usr/bin/claude
 
+⚠️ **重要**：cc-connect 不传递环境变量给子进程，必须把 API Key 硬编码在包装器里！
+
 ```bash
-cat > /data/data/com.termux/files/usr/bin/claude << 'EOF'
+# 先确保 API Key 已设置
+source ~/.bashrc
+echo $ANTHROPIC_API_KEY   # 确认非空
+
+# 创建包装器（用双引号 EOF 以展开 $ANTHROPIC_API_KEY）
+cat > /data/data/com.termux/files/usr/bin/claude << EOF
 #!/data/data/com.termux/files/usr/bin/sh
-exec /usr/bin/node /home/bin/claude-fast.js "$@"
+export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
+exec /usr/bin/node /home/bin/claude-fast.js "\$@"
 EOF
 # 把 /usr/bin/claude 替换成自己的包装器
 # cc-connect 调 claude 时实际跑的是我们的脚本
@@ -759,7 +767,7 @@ ls -la /data/data/com.termux/files/usr/bin/claude
 # 确认文件存在且有执行权限
 
 cat /data/data/com.termux/files/usr/bin/claude
-# 确认内容是包装器脚本（应显示 exec /usr/bin/node ...）
+# 确认内容是包装器脚本（应显示 export ANTHROPIC_API_KEY=sk-... 和 exec /usr/bin/node ...）
 ```
 
 ## 10. 创建工作目录和人设文件

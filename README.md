@@ -48,7 +48,7 @@ git clone https://github.com/99cz99/pocket-wechat-bot.git
 
 > 没有 PC？手机 Termux 里直接跑也行：`git clone https://github.com/99cz99/pocket-wechat-bot.git && cd pocket-wechat-bot && bash scripts/setup-phone.sh`
 >
-> 详细步骤见 [部署教程](docs/deploy-guide.html)。
+> 详细步骤见 [部署教程](docs/deploy-from-zero.md)。
 
 ### 无脑部署 🤖（让 AI 帮你）
 
@@ -148,15 +148,23 @@ cp ~/pocket-wechat-bot/scripts/start-bot.sh ~/start-nene.sh
 
 ### 8. 创建 claude 包装器
 
-cc-connect 通过调用 `/usr/bin/claude` 来启动 AI 进程：
+cc-connect 通过调用 `/usr/bin/claude` 来启动 AI 进程。**⚠️ cc-connect 不传递环境变量给子进程，必须把 API Key 硬编码在包装器里！**
 
 ```bash
+# 先获取 bashrc 中已设置的 API Key
+source ~/.bashrc
+
 # 创建包装器（proot 内 /usr/bin/claude 即 Termux 真实 /usr/bin/claude）
-cat > /data/data/com.termux/files/usr/bin/claude << 'EOF'
+# 注意：$ANTHROPIC_API_KEY 不加引号外的花括号，直接替换为实际值
+cat > /data/data/com.termux/files/usr/bin/claude << EOF
 #!/data/data/com.termux/files/usr/bin/sh
-exec /usr/bin/node /home/bin/claude-fast.js "$@"
+export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
+exec /usr/bin/node /home/bin/claude-fast.js "\$@"
 EOF
 chmod +x /data/data/com.termux/files/usr/bin/claude
+
+# 验证包装器内容（确认 export 行存在且有正确的 Key）
+cat /data/data/com.termux/files/usr/bin/claude
 
 # 安装 claude-fast.js
 cp ~/pocket-wechat-bot/claude-fast.js ~/bin/claude-fast.js
@@ -204,7 +212,7 @@ bash ~/start-nene.sh
 |------|------|
 | [usage.md](docs/usage.md) | 使用指南 · 命令与交互 |
 | [deploy-from-zero.md](docs/deploy-from-zero.md) | 从零部署完整教程 |
-| [deploy-guide.html](docs/deploy-guide.html) | 部署教程（精美 HTML 版） |
+| [deploy-from-zero.md](docs/deploy-from-zero.md) | 从零部署完整教程 |
 | [nene-skill-intro.html](docs/nene-skill-intro.html) | 宁宁 Skill 角色介绍 |
 | [android-claude-code-fix.md](docs/android-claude-code-fix.md) | Android/Termux 兼容性排障 |
 | [create-your-own-skill.md](docs/create-your-own-skill.md) | 自定义人格创作指南 |

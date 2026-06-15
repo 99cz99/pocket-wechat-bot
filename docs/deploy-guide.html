@@ -491,10 +491,12 @@ account_id: xxxxxxxxxxxxx@im.wechat</code></pre>
       <div class="method-content method-adb show">
         <p><strong>步骤 A：复制 claude-fast.js</strong></p>
 <pre><code>adb shell "run-as com.termux sh -c 'cp ~/pocket-wechat-bot/claude-fast.js ~/bin/claude-fast.js && chmod +x ~/bin/claude-fast.js'"</code></pre>
-        <p><strong>步骤 B：创建 /usr/bin/claude 包装器</strong></p>
+        <p><strong>步骤 B：创建 /usr/bin/claude 包装器</strong>（⚠️ 必须包含 API Key）</p>
+        <p>把下面命令中的 <code>sk-你的key</code> 替换为真实 API Key：</p>
 <pre><code>adb shell "run-as com.termux sh -c 'cat > /data/data/com.termux/files/usr/bin/claude << EOF
 #!/data/data/com.termux/files/usr/bin/sh
-exec /usr/bin/node /home/bin/claude-fast.js \"\\\$@\"
+export ANTHROPIC_API_KEY=sk-你的key
+	exec /usr/bin/node /home/bin/claude-fast.js \"\\\$@\"
 EOF
 chmod +x /data/data/com.termux/files/usr/bin/claude'"</code></pre>
       </div>
@@ -502,10 +504,12 @@ chmod +x /data/data/com.termux/files/usr/bin/claude'"</code></pre>
         <p><strong>步骤 A：复制 claude-fast.js</strong></p>
 <pre><code>cp ~/pocket-wechat-bot/claude-fast.js ~/bin/claude-fast.js
 chmod +x ~/bin/claude-fast.js</code></pre>
-        <p><strong>步骤 B：创建 /usr/bin/claude 包装器</strong></p>
-<pre><code>cat > /data/data/com.termux/files/usr/bin/claude << 'EOF'
+        <p><strong>步骤 B：创建 /usr/bin/claude 包装器</strong>（⚠️ 必须包含 API Key）</p>
+        <p>先 <code>source ~/.bashrc</code> 确保变量已加载，然后：</p>
+<pre><code>cat > /data/data/com.termux/files/usr/bin/claude << EOF
 #!/data/data/com.termux/files/usr/bin/sh
-exec /usr/bin/node /home/bin/claude-fast.js "$@"
+export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
+exec /usr/bin/node /home/bin/claude-fast.js "\$@"
 EOF
 chmod +x /data/data/com.termux/files/usr/bin/claude</code></pre>
       </div>
