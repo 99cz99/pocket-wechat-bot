@@ -81,7 +81,7 @@ Write-Host "[*] 文件已推送到手机"
 
 # ----- 复制到 Termux -----
 Write-Host "[*] 正在复制到 Termux..."
-adb shell "cd /sdcard/Download && tar czf - pocket-wechat-bot/ 2>/dev/null | run-as com.termux sh -c 'cd /data/data/com.termux/files/home && rm -rf pocket-wechat-bot && tar xzf -'" 2>$null
+adb shell "cd /sdcard/Download && tar czf - pocket-wechat-bot/ 2>/dev/null | run-as com.termux sh -c 'export HOME=/data/data/com.termux/files/home && cd /data/data/com.termux/files/home && rm -rf pocket-wechat-bot && tar xzf -'" 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════╗"
@@ -124,7 +124,7 @@ Write-Host "----------------------------------------"
 Write-Host "  手机端输出："
 Write-Host "----------------------------------------"
 Write-Host ""
-adb shell "run-as com.termux sh -c 'cd /data/data/com.termux/files/home/pocket-wechat-bot && chmod +x scripts/setup-phone.sh scripts/start-bot.sh && DEPLOY_NONINTERACTIVE=1 ./scripts/setup-phone.sh'"
+adb shell "run-as com.termux sh -c 'export HOME=/data/data/com.termux/files/home && cd /data/data/com.termux/files/home/pocket-wechat-bot && chmod +x scripts/setup-phone.sh scripts/start-bot.sh && DEPLOY_NONINTERACTIVE=1 ./scripts/setup-phone.sh'"
 Write-Host ""
 Write-Host "----------------------------------------"
 Write-Host "  手机端输出结束"

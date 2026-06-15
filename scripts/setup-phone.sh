@@ -55,8 +55,9 @@ preflight() {
 
     # 存储空间检查
     local avail
-    avail=$(df -k "$HOME" | tail -1 | awk '{print $4}')
-    if [ "$avail" -lt 512000 ] 2>/dev/null; then
+    avail=$(df -k "${HOME:-/data/data/com.termux/files/home}" 2>/dev/null | tail -1 | awk '{print $4}')
+    [ -z "$avail" ] && avail=9999999  # df 失败则跳过检查
+    if [ "${avail:-0}" -lt 512000 ] 2>/dev/null; then
         warn "剩余存储空间不足 500MB（当前 $(($avail/1024))MB），部署可能失败"
         echo "    建议先清理不需要的文件"
         if [ "$NONINTERACTIVE" = "1" ]; then
