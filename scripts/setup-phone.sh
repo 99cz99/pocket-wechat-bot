@@ -412,6 +412,15 @@ step_apikey() {
         echo "export ANTHROPIC_API_KEY=$key" >> "$HOME/.bashrc"
         export ANTHROPIC_API_KEY="$key"
         ok "API Key 已写入 ~/.bashrc"
+        # 同步更新 /usr/bin/claude 包装器（cc-connect 不传递环境变量给子进程）
+        local wrapper="$TERMUX_USR/bin/claude"
+        cat > "$wrapper" << WRAPPER_EOF
+#!/data/data/com.termux/files/usr/bin/sh
+export ANTHROPIC_API_KEY="$key"
+exec /usr/bin/node /home/bin/claude-fast.js "\$@"
+WRAPPER_EOF
+        chmod +x "$wrapper"
+        ok "包装器已注入 API Key: $wrapper"
     else
         info "跳过（未提供 API Key），请手动添加："
         echo '      echo "export ANTHROPIC_API_KEY=sk-你的key" >> ~/.bashrc'
