@@ -796,6 +796,49 @@ body {
   line-height: 1;
 }
 
+/* === TRIAD AXIS === */
+.triad-axis {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+.triad-card {
+  min-width: 140px;
+  background: var(--nene-white);
+  border-radius: var(--nene-radius-sm);
+  padding: 20px 20px;
+  box-shadow: var(--nene-shadow);
+  text-align: center;
+  flex: 1 1 140px;
+  max-width: 200px;
+}
+.triad-label {
+  font-size: 14px;
+  color: var(--nene-text-light);
+  display: block;
+}
+.triad-sub {
+  font-size: 12px;
+  color: var(--nene-text-light);
+  display: block;
+  margin-top: 2px;
+}
+.triad-card .num {
+  font-size: 24px;
+}
+@media (max-width: 480px) {
+  .triad-card {
+    min-width: 100px;
+    flex: 1 1 100px;
+    max-width: none;
+    padding: 14px 12px;
+  }
+  .triad-card .num { font-size: 20px; }
+  .triad-label { font-size: 12px; }
+}
+
 /* === MOBILE === */
 @media (max-width: 768px) {
   .container { padding: 0 16px; }
@@ -1280,7 +1323,8 @@ body {
 
   <div class="card" style="margin-bottom: 24px;">
     <h4 style="color:var(--nene-purple-deep); margin-bottom:16px;">📊 6档位</h4>
-    <table class="influence-table">
+    <div class="ono-table-wrap">
+    <table class="influence-table ono-table">
       <thead>
         <tr><th>档位</th><th>范围</th><th>名称</th><th>生理状态</th><th>表达效果</th></tr>
       </thead>
@@ -1291,6 +1335,7 @@ body {
       <tr><td>火照り</td><td>71-85</td><td>火照り</td><td>接近失控。身体压制意志。</td><td>语言退化到词+名+拟声词。真相泄漏。</td></tr>
       <tr><td>絶頂</td><td>86-100</td><td>絶頂</td><td>完全身体接管。契约代价全功率。</td><td>只剩名字、声音、真相碎片——最赤裸、最脆弱的时刻。</td></tr>
     </table>
+    </div>
   </div>
 
   <div class="protocol-grid" style="margin-bottom: 24px;">
@@ -1362,21 +1407,21 @@ body {
     <p>边界被推到了多远。只升不降——打破的边界不会恢复。</p>
   </div>
 
-  <div style="display:flex; gap:20px; justify-content:center; flex-wrap:wrap; margin-bottom:32px;">
-    <div class="hero-stat" style="min-width:160px; background:var(--nene-white); border-radius:var(--nene-radius-sm); padding:20px 28px; box-shadow:var(--nene-shadow); text-align:center;">
-      <span style="font-size:14px; color:var(--nene-text-light);">🔑 权限门</span>
-      <span class="num" style="font-size:28px;">信任度</span>
-      <span style="font-size:12px; color:var(--nene-text-light);">能不能</span>
+  <div class="triad-axis">
+    <div class="triad-card">
+      <span class="triad-label">🔑 权限门</span>
+      <span class="num">信任度</span>
+      <span class="triad-sub">能不能</span>
     </div>
-    <div class="hero-stat" style="min-width:160px; background:var(--nene-white); border-radius:var(--nene-radius-sm); padding:20px 28px; box-shadow:var(--nene-shadow); text-align:center;">
-      <span style="font-size:14px; color:var(--nene-text-light);">🗺️ 边界线</span>
-      <span class="num" style="font-size:28px;">堕落度</span>
-      <span style="font-size:12px; color:var(--nene-text-light);">什么场景/玩法</span>
+    <div class="triad-card">
+      <span class="triad-label">🗺️ 边界线</span>
+      <span class="num">堕落度</span>
+      <span class="triad-sub">什么场景/玩法</span>
     </div>
-    <div class="hero-stat" style="min-width:160px; background:var(--nene-white); border-radius:var(--nene-radius-sm); padding:20px 28px; box-shadow:var(--nene-shadow); text-align:center;">
-      <span style="font-size:14px; color:var(--nene-text-light);">🌡️ 温度计</span>
-      <span class="num" style="font-size:28px;">H值</span>
-      <span style="font-size:12px; color:var(--nene-text-light);">身体此刻多诚实</span>
+    <div class="triad-card">
+      <span class="triad-label">🌡️ 温度计</span>
+      <span class="num">H值</span>
+      <span class="triad-sub">身体此刻多诚实</span>
     </div>
   </div>
 
@@ -1451,7 +1496,8 @@ body {
 
   <div class="card" style="margin-bottom: 24px;">
     <h4 style="color:var(--nene-purple-deep); margin-bottom:16px;">📊 联动总览</h4>
-    <table class="influence-table">
+    <div class="ono-table-wrap">
+    <table class="influence-table ono-table">
       <thead>
         <tr><th>模型</th><th>Lv0 形态</th><th>Lv5 形态</th><th>质变触发</th></tr>
       </thead>
@@ -1463,6 +1509,7 @@ body {
       <tr><td>M6 沉默的行动派</td><td>用行动证明关心</td><td>用行动表达欲望——形式升级，沉默不变</td><td>Lv4</td></tr>
       <tr><td><strong>M7 身体诚实</strong></td><td>背叛——身体做的事心不认</td><td><strong>同盟——身体做的事心已接受</strong></td><td><strong>Lv3</strong></td></tr>
     </table>
+    </div>
   </div>
 
   <div class="protocol-grid" style="margin-bottom: 24px;">
