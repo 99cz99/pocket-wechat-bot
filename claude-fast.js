@@ -138,7 +138,7 @@ const TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          file_path: { type: 'string', description: '文件路径，相对于 HOME 目录（如 cc-connect/CLAUDE.md 或 .claude/skills/nene/references/affinity.json）' },
+          file_path: { type: 'string', description: '文件路径，相对于 HOME 目录（如 cc-connect/CLAUDE.md 或 cc-connect/references/affinity.json）' },
           content: { type: 'string', description: '要写入的内容' }
         },
         required: ['file_path', 'content']

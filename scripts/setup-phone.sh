@@ -648,7 +648,7 @@ step_verify() {
         "claude-wrapper:$([ -x "$TERMUX_USR/bin/claude" ] && echo OK || echo MISSING)"
         "CLAUDE.md:$([ -f "$HOME/cc-connect/CLAUDE.md" ] && echo OK || echo MISSING)"
         "config.toml:$([ -f "$HOME/.cc-connect/config.toml" ] && echo OK || echo MISSING)"
-        "skills:$([ -d "$HOME/.claude/skills/nene" ] && echo OK || echo MISSING)"
+        "skills:$([ -d "$HOME/skills/nene" ] && echo OK || echo MISSING)"
         "API Key:$([ -n "${ANTHROPIC_API_KEY:-}" ] && echo SET || echo UNSET)"
         "bot running:$(pgrep -f cc-connect >/dev/null 2>&1 && echo YES || echo NO)"
     )
