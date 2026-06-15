@@ -101,7 +101,7 @@ proot \
   -b /dev:/dev \
   -b /proc:/proc \
   /usr/bin/env ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" SSL_CERT_FILE="$SSL_CERT_FILE" PATH=/usr/bin:/usr/local/bin:/home/bin \
-  $HOME/bin/cc-connect --config "$CONFIG" &
+  $HOME/bin/cc-connect --config "$CONFIG" 2>&1 | tee -a "$HOME/cc-connect/cc-connect.log" &
 CC_PID=$!
 
 sleep 2
