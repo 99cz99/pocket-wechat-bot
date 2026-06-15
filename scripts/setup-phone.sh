@@ -870,4 +870,7 @@ main() {
     print_todo
 }
 
-main "$@"
+# 仅在直接执行时运行 main，source 时只加载函数
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
+fi
