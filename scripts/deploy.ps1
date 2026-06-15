@@ -385,7 +385,7 @@ Write-Step 5 "配置文件（config.toml）"
 
 # 获取 API Key
 $apiKeyVal = Invoke-Termux "grep 'ANTHROPIC_API_KEY' /data/data/com.termux/files/home/.bashrc 2>/dev/null | tail -1 | sed 's/.*=//'"
-$apiKeyVal = $apiKeyVal.Trim()
+if ($apiKeyVal) { $apiKeyVal = $apiKeyVal.Trim() }
 
 # 运行 step_config
 $cfgCmd = "cd $PhoneRepo && REPO_DIR='$PhoneRepo' DEPLOY_API_KEY='$apiKeyVal' $PhoneBash -c 'source scripts/setup-phone.sh; step_config'"
@@ -394,7 +394,7 @@ Write-Host $configOut
 
 # 检查剩余占位符
 $remaining = Invoke-Termux "grep -c '<YOUR_' /data/data/com.termux/files/home/.cc-connect/config.toml 2>/dev/null || echo 0"
-$remaining = $remaining.Trim()
+if ($remaining) { $remaining = $remaining.Trim() }
 
 if ($remaining -eq "0") {
     Write-OK "config.toml 已完整生成"
@@ -486,7 +486,7 @@ echo "回到 PC 按回车继续部署。"
         Read-Host "  扫码完成后，按回车继续"
 
         $tokenCheck = Invoke-Termux "grep -o 'wx_[a-zA-Z0-9_-]*' /data/data/com.termux/files/home/.cc-connect/config.toml 2>/dev/null | head -1"
-        $tokenCheck = $tokenCheck.Trim()
+        if ($tokenCheck) { $tokenCheck = $tokenCheck.Trim() }
 
         if ($tokenCheck -and $tokenCheck -ne '<YOUR_BOT_TOKEN>') {
             Write-OK "检测到 token: $tokenCheck"
@@ -495,7 +495,7 @@ echo "回到 PC 按回车继续部署。"
         }
 
         $scanToken = Invoke-Termux "cat /data/data/com.termux/files/home/cc-connect/cc-connect.log 2>/dev/null | grep -o 'wx_[a-zA-Z0-9_-]*' | head -1"
-        $scanToken = $scanToken.Trim()
+        if ($scanToken) { $scanToken = $scanToken.Trim() }
         if ($scanToken) {
             $sedCmd = "sed -i 's#<YOUR_BOT_TOKEN>#$scanToken#g' /data/data/com.termux/files/home/.cc-connect/config.toml"
             Invoke-Termux $sedCmd | Out-Null
@@ -599,7 +599,8 @@ if (Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/hom
 
 # config.toml
 $rem = Invoke-Termux "grep -c '<YOUR_' /data/data/com.termux/files/home/.cc-connect/config.toml 2>/dev/null || echo 0"
-if ($rem.Trim() -eq "0") {
+$remVal = if ($rem) { $rem.Trim() } else { "0" }
+if ($remVal -eq "0") {
     Write-OK "config.toml     已填写完整"
 } else {
     Write-Fail "config.toml     还有占位符"
@@ -645,7 +646,7 @@ Write-Host "  管理面板:  http://127.0.0.1:9820"
 Write-Host "  重新部署:  再次右键运行本脚本（已完成的步骤自动跳过）"
 Write-Host ""
 
-$allGood = $apiKeySet -and ($rem.Trim() -eq "0") -and $tokenOk -and $openidOk -and $running
+$allGood = $apiKeySet -and ($remVal -eq "0") -and $tokenOk -and $openidOk -and $running
 if ($allGood) {
     Write-Host "=============================================" -ForegroundColor Green
     Write-Host "  全部就绪！微信给 Bot 发条消息试试吧~" -ForegroundColor Green
