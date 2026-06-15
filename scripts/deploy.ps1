@@ -46,10 +46,15 @@ Write-Host "[*] Termux 已安装"
 Write-Host "[*] 查找 cc-connect 二进制..."
 $ccBin = $null
 $ccUrl = "https://github.com/chenhg5/cc-connect/releases/latest/download/cc-connect-linux-arm64"
-$desktopFile = [Environment]::GetFolderPath("Desktop") + "\cc-connect-linux-arm64"
+$desktopDir = [Environment]::GetFolderPath("Desktop")
 
-# 1) 先检查桌面是否已有
-if (Test-Path $desktopFile) {
+# 1) 先检查桌面是否已有（匹配任意版本号的文件名）
+$desktopFile = Get-ChildItem -Path $desktopDir -Filter "cc-connect*" | Where-Object {
+    $_.Name -match "^cc-connect" -and $_.Name -notmatch "\.(md|txt)$"
+} | Select-Object -First 1
+
+if ($desktopFile) {
+    $desktopFile = $desktopFile.FullName
     Write-Host "[*] 检测到桌面文件: $desktopFile"
     # 检查是否为 ELF 二进制（0x7f 'E' 'L' 'F'）
     $magic = [System.IO.File]::ReadAllBytes($desktopFile)[0..3]
@@ -86,7 +91,7 @@ if (Test-Path $desktopFile) {
         }
     } else {
         Write-Host "[!] 桌面文件无法识别（既非二进制也非压缩包）"
-        Write-Host "    请从 GitHub Assets 下载: cc-connect-linux-arm64"
+        Write-Host "    请从 GitHub Assets 下载 cc-connect-*-linux-arm64.tar"
         Write-Host "    https://github.com/chenhg5/cc-connect/releases/latest"
         Pause; exit 1
     }
@@ -110,9 +115,9 @@ if (-not $ccBin) {
     Write-Host "  请手动操作："
     Write-Host "  1. 浏览器打开:"
     Write-Host "     https://github.com/chenhg5/cc-connect/releases/latest"
-    Write-Host "  2. 下载 cc-connect-linux-arm64 到桌面"
-    Write-Host "  3. 文件名必须为: cc-connect-linux-arm64"
-    Write-Host "  4. 下载完成后重新运行本脚本"
+    Write-Host "  2. 在 Assets 区域找到 cc-connect-*-linux-arm64.tar"
+    Write-Host "     下载到桌面（不要改名）"
+    Write-Host "  3. 下载完成后重新运行本脚本（会自动解压）"
     Write-Host ""
     Pause; exit 1
 }
