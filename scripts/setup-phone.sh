@@ -274,12 +274,13 @@ step_personality() {
         err "找不到 CLAUDE.md（路径：$REPO_DIR/CLAUDE.md）"
     fi
 
-    # skills/nene/ → 两个位置都部署（兼容 claude-fast.js 硬编码路径和 CLAUDE.md 相对路径）
+    # skills/nene/ → ~/skills/nene/（AI Read 工具从此路径读取）
     if [ -d "$REPO_DIR/skills/nene" ]; then
-        mkdir -p "$HOME/.claude/skills/nene" "$HOME/skills/nene"
-        cp -r "$REPO_DIR/skills/nene/"* "$HOME/.claude/skills/nene/"
+        mkdir -p "$HOME/skills/nene"
         cp -r "$REPO_DIR/skills/nene/"* "$HOME/skills/nene/"
-        ok "skills/nene/ → ~/.claude/skills/nene/ & ~/skills/nene/"
+        ok "skills/nene/ → ~/skills/nene/"
+        # 清理旧的多余路径（以前部署会复制多份）
+        rm -rf "$HOME/.claude/skills" 2>/dev/null || true
     else
         warn "找不到 skills/nene/ 目录，人格文件未部署"
     fi

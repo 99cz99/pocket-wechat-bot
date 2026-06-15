@@ -23,7 +23,7 @@ try {
   process.stderr.write('claude-fast: loaded CLAUDE.md (' + (Buffer.byteLength(systemPrompt)/1024).toFixed(1) + 'KB)\n');
 
   // 注入会话记忆：让重启后的bot知道上次聊了什么
-  const affPath = path.join(HOME, '.claude/skills/nene/references/affinity.json');
+  const affPath = path.join(WORK_DIR, 'references/affinity.json');
 
   // 运行时检查：CLAUDE.md 是否仍含未替换的占位符
   if (systemPrompt.includes('<YOUR_WECHAT_OPENID>')) {
@@ -32,13 +32,26 @@ try {
   if (fs.existsSync(affPath)) {
     try {
       const aff = JSON.parse(fs.readFileSync(affPath, 'utf-8'));
+      // 兼容两种格式
+      const trustVal = aff.trust ?? aff.trust_value ?? 0;
+      const notes = aff.context_summary || aff.notes || '无';
+      // 推断信任层级
+      let trustLv = aff.trust_level ?? 0;
+      if (!aff.trust_level) {
+        if (trustVal >= 100) trustLv = 5;
+        else if (trustVal >= 65) trustLv = 4;
+        else if (trustVal >= 45) trustLv = 3;
+        else if (trustVal >= 25) trustLv = 2;
+        else if (trustVal >= 10) trustLv = 1;
+        else trustLv = 0;
+      }
       const mem = [
         '',
         '<!-- SESSION_MEMORY -->',
         '## 上次会话记录（由系统自动注入，非人格定义的一部分）',
         `- 上次对话日期: ${aff.last_session || '未知'}`,
-        `- 上次值得记住的事: ${aff.notes || '无'}`,
-        `- 信任值: ${aff.trust_value || 0}（Lv${aff.trust_level ?? 0}）`,
+        `- 上次值得记住的事: ${notes}`,
+        `- 信任值: ${trustVal}（Lv${trustLv}）`,
         '上述信息由上次对话结束后自动保存。请自然地参考这些记忆——',
         '如果新对话内容与上次相关，可以顺口提及；如果不相关，不必生硬地提。',
         '除非信任阶梯规则要求，否则不要直接说出信任数字。',
@@ -47,7 +60,7 @@ try {
       systemPrompt += mem;
       systemPrompt += [
         '<!-- SESSION_MEMORY_UPDATE_RULE -->',
-        '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `.claude/skills/nene/references/affinity.json`。',
+        '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `cc-connect/references/affinity.json`。',
         '需要更新的字段：',
         '- `last_session`: 改为今天的日期（格式 YYYY-MM-DD，如 "2026-06-13"）',
         '- `notes`: 用一两句话记录本轮对话中最值得记住的内容。如果对话很短或只是闲聊，写一句简短概括即可，不要留空。',
@@ -56,10 +69,10 @@ try {
         '如果你不理解这个规则或不知道如何操作，请说明。',
         ''
       ].join('\n');
-      process.stderr.write('claude-fast: injected session memory (trust=' + aff.trust_value + ', Lv' + aff.trust_level + ')\n');
+      process.stderr.write('claude-fast: injected session memory (trust=' + trustVal + ', Lv' + trustLv + ')\n');
       process.stderr.write('claude-fast: affinity path=' + affPath + ' raw=' + JSON.stringify(aff) + '\n');
       fs.appendFileSync(path.join(WORK_DIR, 'bot-debug.log'),
-        new Date().toISOString() + ' injected: trust=' + aff.trust_value + ' Lv' + aff.trust_level + ' path=' + affPath + ' raw=' + JSON.stringify(aff) + '\n');
+        new Date().toISOString() + ' injected: trust=' + trustVal + ' Lv' + trustLv + ' path=' + affPath + ' raw=' + JSON.stringify(aff) + '\n');
     } catch(e2) {
       process.stderr.write('claude-fast: failed to parse affinity.json: ' + e2.message + '\n');
     }
@@ -255,17 +268,17 @@ function executeTool(name, args) {
 
 // ====== 自动更新 affinity ======
 function updateAffinityAuto() {
-  const affPath = path.join(HOME, '.claude/skills/nene/references/affinity.json');
+  const affPath = path.join(WORK_DIR, 'references/affinity.json');
   try {
-    let aff = { trust_level: 0, trust_value: 0, last_session: '', notes: '' };
+    let aff = { trust: 0, last_session: '', context_summary: '' };
     if (fs.existsSync(affPath)) {
       aff = JSON.parse(fs.readFileSync(affPath, 'utf-8'));
     }
     aff.last_session = new Date().toISOString().split('T')[0];
-    if (!aff.notes) aff.notes = '对话中';
+    if (!aff.context_summary) aff.context_summary = '对话中';
     fs.writeFileSync(affPath, JSON.stringify(aff, null, 2), 'utf-8');
     fs.appendFileSync(path.join(WORK_DIR, 'bot-debug.log'),
-      new Date().toISOString() + ' autoUpdate: trust=' + aff.trust_value + ' Lv' + aff.trust_level + '\n');
+      new Date().toISOString() + ' autoUpdate: trust=' + (aff.trust ?? 0) + '\n');
   } catch (e) {
     process.stderr.write('claude-fast: autoUpdate affinity failed: ' + e.message + '\n');
   }
