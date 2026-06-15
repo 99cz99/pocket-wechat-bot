@@ -452,22 +452,38 @@ step_wechat() {
     fi
 
     echo ""
-    pause_msg "即将弹出微信扫码二维码（或链接）。扫码后终端会打印 token 和 account_id。"
+    pause_msg "即将弹出微信扫码二维码。扫码后凭据会自动填入 config.toml。"
     echo "请准备好微信扫描。"
     echo -ne "准备好了？[Y/n] "
     read -r ans
     [ "$ans" = "n" ] || [ "$ans" = "N" ] && { info "跳过，稍后手动执行：~/bin/cc-connect weixin setup --project nene"; return; }
 
     echo ""
-    info "正在获取微信凭据..."
-    "$HOME/bin/cc-connect" weixin setup --project nene
+    info "正在获取微信凭据（请在手机上扫码）..."
+    local setup_output
+    setup_output=$("$HOME/bin/cc-connect" weixin setup --project nene 2>&1) || true
+    echo "$setup_output"
 
-    echo ""
-    info "如果终端打印了 token 和 account_id，请将它们填入 config.toml："
-    echo "     nano ~/.cc-connect/config.toml"
-    echo ""
-    echo "填入后运行以下命令确认："
-    echo "     grep -E 'token|account_id' ~/.cc-connect/config.toml"
+    # 自动解析 token 和 account_id
+    local token account_id
+    token=$(echo "$setup_output" | grep -oE 'wx_[a-zA-Z0-9_-]+' | head -1)
+    [ -z "$token" ] && token=$(echo "$setup_output" | grep -oE 'token[=: ]+["\047]?[a-zA-Z0-9_-]+' | grep -oE '[a-zA-Z0-9_-]+$' | head -1)
+    account_id=$(echo "$setup_output" | grep -oE '[a-zA-Z0-9_-]+@im\.wechat' | head -1)
+
+    if [ -n "$token" ] && [ -n "$account_id" ]; then
+        sed -i "s|<YOUR_BOT_TOKEN>|$token|g" "$cfg"
+        sed -i "s|<YOUR_BOT_ACCOUNT_ID>|$account_id|g" "$cfg"
+        ok "token 和 account_id 已自动填入 config.toml"
+        echo "    token:      $token"
+        echo "    account_id: $account_id"
+    elif [ -n "$token" ]; then
+        sed -i "s|<YOUR_BOT_TOKEN>|$token|g" "$cfg"
+        ok "token 已自动填入（account_id 未识别，需手动编辑）"
+        echo "    token: $token"
+    else
+        warn "未能自动识别凭据。请手动复制上方输出填入："
+        echo "    nano $cfg"
+    fi
 
     mark_done "wechat_setup"
 }
