@@ -486,6 +486,20 @@ step_apikey() {
     if step_done "api_key_bashrc"; then
         # 复查：旧版可能把空 key 也标记为完成
         if grep -q "ANTHROPIC_API_KEY=sk-" "$HOME/.bashrc" 2>/dev/null; then
+            # 即使标记完成，也必须确保包装器注入了 API Key
+            # （旧版 step_claude_wrapper 创建时没有注入 key）
+            local existing_val
+            existing_val=$(grep "ANTHROPIC_API_KEY" "$HOME/.bashrc" | tail -1 | sed 's/.*=//')
+            if ! grep -q "ANTHROPIC_API_KEY=sk-" "$TERMUX_USR/bin/claude" 2>/dev/null; then
+                info "检测到包装器缺失 API Key，正在修复..."
+                cat > "$TERMUX_USR/bin/claude" << WRAPPER_EOF
+#!/data/data/com.termux/files/usr/bin/sh
+export ANTHROPIC_API_KEY="$existing_val"
+exec /usr/bin/node /home/bin/claude-fast.js "\$@"
+WRAPPER_EOF
+                chmod +x "$TERMUX_USR/bin/claude"
+                ok "claude 包装器已修复"
+            fi
             skip "API Key 环境变量已设置"
             return
         fi

@@ -331,11 +331,10 @@ Write-Host ""
 # ============================================================
 Write-Step 4 "配置 DeepSeek API Key"
 
+# 1. 确保 bashrc 有 API Key
 $apiKeySet = Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/home/.bashrc"
 
-if ($apiKeySet) {
-    Write-OK "API Key 已配置"
-} else {
+if (-not $apiKeySet) {
     Write-Warn "API Key 未设置"
     Write-Host ""
     Write-Host "  DeepSeek API Key 获取方式："
@@ -353,29 +352,56 @@ if ($apiKeySet) {
     } while (-not $apiKey)
 
     Write-Info "正在写入手机..."
-
-    # 写入 bashrc
     $bashrcLine = "echo 'export ANTHROPIC_API_KEY=$apiKey' >> /data/data/com.termux/files/home/.bashrc"
     Invoke-Termux $bashrcLine | Out-Null
-
-    # 更新 claude 包装器（用 base64 避免 shell 转义问题）
-    $wrapperContent = @"
-#!/data/data/com.termux/files/usr/bin/sh
-export ANTHROPIC_API_KEY="$apiKey"
-exec /usr/bin/node /home/bin/claude-fast.js "\$@"
-"@
-    $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($wrapperContent))
-    $b64cmd = "echo '$b64' | base64 -d > /data/data/com.termux/files/usr/bin/claude && chmod +x /data/data/com.termux/files/usr/bin/claude"
-    Invoke-Termux $b64cmd | Out-Null
-
-    # 验证
     $apiKeySet = Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/home/.bashrc"
     if ($apiKeySet) {
-        Write-OK "API Key 已写入手机"
+        Write-OK "API Key 已写入 bashrc"
     } else {
         Write-Fail "写入失败，请手动在 Termux 中执行："
         Write-Host "    echo 'export ANTHROPIC_API_KEY=$apiKey' >> ~/.bashrc"
     }
+} else {
+    Write-OK "API Key 已在 bashrc 中"
+}
+
+# 2. 始终检查并修复 claude 包装器（最关键的环节）
+#    cc-connect 不传递环境变量给子进程，必须把 Key 硬编码在包装器里
+Write-Info "检查 claude 包装器..."
+$wrapperOk = Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/usr/bin/claude"
+
+if (-not $wrapperOk) {
+    Write-Warn "claude 包装器缺少 API Key，正在修复..."
+    # 从 bashrc 提取实际的 key
+    $apiKeyVal = Invoke-Termux "grep 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/home/.bashrc 2>/dev/null | tail -1 | sed 's/.*=sk-/sk-/'"
+    if ($apiKeyVal) { $apiKeyVal = $apiKeyVal.Trim() }
+
+    if ($apiKeyVal -and $apiKeyVal -match '^sk-') {
+        $wrapperContent = @"
+#!/data/data/com.termux/files/usr/bin/sh
+export ANTHROPIC_API_KEY=$apiKeyVal
+exec /usr/bin/node /home/bin/claude-fast.js "\$@"
+"@
+        $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($wrapperContent))
+        $b64cmd = "echo '$b64' | base64 -d > /data/data/com.termux/files/usr/bin/claude && chmod +x /data/data/com.termux/files/usr/bin/claude"
+        Invoke-Termux $b64cmd | Out-Null
+
+        if (Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/usr/bin/claude") {
+            Write-OK "claude 包装器已修复"
+        } else {
+            Write-Fail "claude 包装器写入失败，请手动执行："
+            Write-Host "    cat > /data/data/com.termux/files/usr/bin/claude << 'EOF'"
+            Write-Host "    #!/data/data/com.termux/files/usr/bin/sh"
+            Write-Host "    export ANTHROPIC_API_KEY=$apiKeyVal"
+            Write-Host "    exec /usr/bin/node /home/bin/claude-fast.js `"`$@`""
+            Write-Host "    EOF"
+            Write-Host "    chmod +x /data/data/com.termux/files/usr/bin/claude"
+        }
+    } else {
+        Write-Fail "无法从 bashrc 提取 API Key，跳过包装器修复"
+    }
+} else {
+    Write-OK "claude 包装器正常"
 }
 
 # ============================================================
