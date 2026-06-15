@@ -1,23 +1,24 @@
-﻿# deploy.ps1 - 鍚戝寮忛儴缃插井淇?AI 鏈哄櫒浜哄埌 Android 鎵嬫満
-# 鐢ㄦ硶: 鍙抽敭 -> 浣跨敤 PowerShell 杩愯
-# 闇€瑕? adb + USB 杩炴帴 + 鎵嬫満宸茶 Termux
+﻿# deploy.ps1 - 向导式部署微信 AI 机器人到 Android 手机
+# 用法: 右键 -> 使用 PowerShell 运行
+# 需要: adb + USB 连接 + 手机已装 Termux
 
 $ErrorActionPreference = "Continue"
 $Repo = Split-Path -Parent $PSScriptRoot
 $Tgz = "$env:TEMP\pwb-deploy.tar"
 
 # ============================================================
-# 宸ュ叿鍑芥暟
+# 工具函数
 # ============================================================
 
-# 鍦ㄦ墜鏈轰笂閫氳繃 run-as 鎵ц鍛戒护锛岃繑鍥炶緭鍑?function Invoke-Termux($Cmd) {
+# 在手机上通过 run-as 执行命令，返回输出
+function Invoke-Termux($Cmd) {
     $escaped = $Cmd -replace "'", "'\''"
     $result = adb shell "run-as com.termux sh -c 'export HOME=/data/data/com.termux/files/home; $escaped'" 2>&1
     $script:LastExitOk = ($LASTEXITCODE -eq 0)
     return $result
 }
 
-# 妫€鏌ユ墜鏈轰笂鐨勬煇涓潯浠讹紝杩斿洖 $true / $false
+# 检查手机上的某个条件
 function Test-Termux($Cmd) {
     $out = Invoke-Termux "$Cmd 2>/dev/null && echo YES || echo NO"
     return ($out -match "YES")
@@ -25,10 +26,9 @@ function Test-Termux($Cmd) {
 
 function Write-Step($num, $title) {
     Write-Host ""
-    Write-Host "鈺斺晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晽"
-    Write-Host ("鈺? 姝ラ {0}: {1}" -f $num, $title.PadRight(39)) -NoNewline
-    Write-Host "鈺?
-    Write-Host "鈺氣晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨暆"
+    Write-Host "=============================================="
+    Write-Host "  步骤 $num : $title"
+    Write-Host "=============================================="
     Write-Host ""
 }
 
@@ -49,84 +49,87 @@ function Write-Info($msg) {
 }
 
 # ============================================================
-# 妯箙
+# 横幅
 # ============================================================
 Write-Host ""
-Write-Host "鈺斺晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晽"
-Write-Host "鈺? 寰俊 AI 鏈哄櫒浜?- 鍚戝寮忛儴缃?       鈺?
-Write-Host "鈺氣晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨暆"
+Write-Host "============================================="
+Write-Host "  微信 AI 机器人 - 向导式部署"
+Write-Host "============================================="
 Write-Host ""
 
 # ============================================================
-# 姝ラ 1: 鐜妫€鏌?# ============================================================
-Write-Step 1 "鐜妫€鏌?
+# 步骤 1: 环境检查
+# ============================================================
+Write-Step 1 "环境检查"
 
 # ADB
-Write-Info "妫€鏌?ADB..."
+Write-Info "检查 ADB..."
 if (-not (Get-Command adb -ErrorAction SilentlyContinue)) {
-    Write-Fail "鎵句笉鍒?adb锛岃鍏堝畨瑁?Android Platform Tools"
+    Write-Fail "找不到 adb，请先安装 Android Platform Tools"
     Write-Host "    https://developer.android.com/studio/releases/platform-tools"
     Pause; exit 1
 }
 $devices = adb devices 2>$null | Select-String 'device$'
 if (-not $devices) {
-    Write-Fail "鏈娴嬪埌鎵嬫満"
-    Write-Host "    1. USB 宸茶繛鎺ワ紵"
-    Write-Host "    2. 鎵嬫満宸插紑鍚?USB 璋冭瘯锛?
-    Write-Host "    3. 鎵嬫満涓婂凡鎺堟潈姝ょ數鑴戯紵"
+    Write-Fail "未检测到手机"
+    Write-Host "    1. USB 已连接？"
+    Write-Host "    2. 手机已开启 USB 调试？"
+    Write-Host "    3. 手机上已授权此电脑？"
     Write-Host ""
     adb devices
     Pause; exit 1
 }
-Write-OK "ADB 杩炴帴姝ｅ父"
+Write-OK "ADB 连接正常"
 
 # Termux
-Write-Info "妫€鏌?Termux..."
+Write-Info "检查 Termux..."
 $termux = adb shell pm list packages 2>&1 | Out-String
 if ($termux -notmatch "com.termux") {
-    Write-Fail "鎵嬫満鏈畨瑁?Termux"
-    Write-Host "    璇峰湪 F-Droid 涓嬭浇锛歨ttps://f-droid.org/packages/com.termux/"
-    Write-Host "    杩橀渶瀹夎 Termux:API"
+    Write-Fail "手机未安装 Termux"
+    Write-Host "    请在 F-Droid 下载：https://f-droid.org/packages/com.termux/"
+    Write-Host "    还需安装 Termux:API"
     Pause; exit 1
 }
-Write-OK "Termux 宸插畨瑁?
+Write-OK "Termux 已安装"
 
-# 瀛樺偍绌洪棿
-Write-Info "妫€鏌ュ瓨鍌ㄧ┖闂?.."
-$avail = Invoke-Termux "df -k /data/data/com.termux/files/home 2>/dev/null | tail -1 | awk '{print \$4}'"
+# 存储空间
+Write-Info "检查存储空间..."
+$avail = Invoke-Termux "df -k /data/data/com.termux/files/home 2>/dev/null | tail -1 | awk '{print `$4}'"
 if ($avail -and [int]$avail -lt 512000) {
-    Write-Warn "鍓╀綑绌洪棿涓嶈冻 500MB锛堝綋鍓?$([math]::Floor([int]$avail/1024))MB锛夛紝閮ㄧ讲鍙兘澶辫触"
+    Write-Warn "剩余空间不足 500MB（当前 $([math]::Floor([int]$avail/1024))MB），部署可能失败"
 }
 
-# 妫€鏌ユ槸鍚︽浘缁忛儴缃茶繃锛堟湁鐘舵€佹枃浠讹級
+# 检查是否曾经部署过
 $isRerun = Test-Termux "test -f /data/data/com.termux/files/home/.pocket-bot-deploy-state"
 if ($isRerun) {
-    Write-Info "妫€娴嬪埌宸叉湁閮ㄧ讲璁板綍锛屽凡瀹屾垚姝ラ灏嗚嚜鍔ㄨ烦杩?
+    Write-Info "检测到已有部署记录，已完成步骤将自动跳过"
 }
 
 # ============================================================
-# 姝ラ 2: 鎺ㄩ€佹枃浠?# ============================================================
-Write-Step 2 "鎺ㄩ€佹枃浠跺埌鎵嬫満"
+# 步骤 2: 推送文件
+# ============================================================
+Write-Step 2 "推送文件到手机"
 
-# --- 2.1 鑾峰彇 cc-connect 浜岃繘鍒?---
-Write-Info "鏌ユ壘 cc-connect 浜岃繘鍒?.."
+# --- 2.1 获取 cc-connect 二进制 ---
+Write-Info "查找 cc-connect 二进制..."
 $ccBin = $null
 $ccUrl = "https://github.com/chenhg5/cc-connect/releases/latest/download/cc-connect-linux-arm64"
 $desktopDir = [Environment]::GetFolderPath("Desktop")
-$desktopFile = $null
+$desktopFilePath = $null
 
-# 妫€鏌ユ闈㈡枃浠?$desktopFile = Get-ChildItem -Path $desktopDir -Filter "cc-connect*" | Where-Object {
-    -not $_.PSIsContainer -and $_.Name -match "^cc-connect" -and $_.Name -notmatch "\.(md|txt)$"
+# 检查桌面文件
+$desktopFile = Get-ChildItem -Path $desktopDir -Filter "cc-connect*" | Where-Object {
+    (-not $_.PSIsContainer) -and ($_.Name -match "^cc-connect") -and ($_.Name -notmatch "\.(md|txt)$")
 } | Select-Object -First 1
 
 if ($desktopFile) {
     $desktopFilePath = $desktopFile.FullName
-    Write-Info "妫€娴嬪埌妗岄潰鏂囦欢: $($desktopFile.Name)"
+    Write-Info "检测到桌面文件: $($desktopFile.Name)"
     $magic = [System.IO.File]::ReadAllBytes($desktopFilePath)[0..3]
     if ($magic[0] -eq 0x7f -and $magic[1] -eq 0x45) {
         $ccBin = $desktopFilePath
     } elseif ($desktopFilePath -match "\.(tar|gz|tgz|zip)$") {
-        Write-Info "妫€娴嬪埌鍘嬬缉鍖咃紝姝ｅ湪瑙ｅ帇..."
+        Write-Info "检测到压缩包，正在解压..."
         $extractDir = "$env:TEMP\cc-extract"
         Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
         New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
@@ -134,79 +137,81 @@ if ($desktopFile) {
             tar -xf $desktopFilePath -C $extractDir 2>$null
             if ($LASTEXITCODE -ne 0) { throw "tar failed" }
         } catch {
-            Write-Fail "瑙ｅ帇澶辫触锛岃鎵嬪姩瑙ｅ帇鍚庡皢浜岃繘鍒舵枃浠舵斁鍒版闈?
+            Write-Fail "解压失败，请手动解压后将二进制文件放到桌面"
             Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
             Pause; exit 1
         }
         $found = Get-ChildItem -Path $extractDir -Recurse -File | Where-Object {
             $m = [System.IO.File]::ReadAllBytes($_.FullName)[0..3]
-            $m[0] -eq 0x7f -and $m[1] -eq 0x45
+            ($m[0] -eq 0x7f) -and ($m[1] -eq 0x45)
         } | Select-Object -First 1
         if ($found) {
             $ccBin = $found.FullName
-            Write-OK "宸叉彁鍙? $($found.Name)"
+            Write-OK "已提取: $($found.Name)"
         } else {
-            Write-Fail "鍘嬬缉鍖呭唴鏈壘鍒?ELF 浜岃繘鍒?
-            Write-Host "    璇风‘璁や笅杞界殑鏄?Assets 涓殑 cc-connect-linux-arm64.tar"
+            Write-Fail "压缩包内未找到 ELF 二进制"
+            Write-Host "    请确认下载的是 Assets 中的 cc-connect-linux-arm64.tar"
             Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
             Pause; exit 1
         }
     } else {
-        Write-Fail "妗岄潰鏂囦欢鏃犳硶璇嗗埆锛堟棦闈炰簩杩涘埗涔熼潪鍘嬬缉鍖咃級"
-        Write-Host "    璇蜂粠 GitHub Assets 涓嬭浇 cc-connect-*-linux-arm64.tar"
+        Write-Fail "桌面文件无法识别（既非二进制也非压缩包）"
+        Write-Host "    请从 GitHub Assets 下载 cc-connect-*-linux-arm64.tar"
         Write-Host "    https://github.com/chenhg5/cc-connect/releases/latest"
         Pause; exit 1
     }
 }
 
-# 鑷姩涓嬭浇
+# 自动下载
 if (-not $ccBin) {
-    Write-Info "灏濊瘯鑷姩涓嬭浇 cc-connect..."
+    Write-Info "尝试自动下载 cc-connect..."
     $ccBin = "$env:TEMP\cc-connect-linux-arm64"
     try {
         Invoke-WebRequest -Uri $ccUrl -OutFile $ccBin -TimeoutSec 60 -ErrorAction Stop
-        Write-OK "涓嬭浇瀹屾垚"
+        Write-OK "下载完成"
     } catch {
         Remove-Item $ccBin -ErrorAction SilentlyContinue
         $ccBin = $null
-        Write-Warn "鑷姩涓嬭浇澶辫触锛堝彲鑳芥槸缃戠粶闂锛?
+        Write-Warn "自动下载失败（可能是网络问题）"
     }
 }
 
-# 鎵嬪姩涓嬭浇鎸囧紩
+# 手动下载指引
 if (-not $ccBin) {
     Write-Host ""
-    Write-Host "  璇锋墜鍔ㄦ搷浣滐細"
-    Write-Host "  1. 娴忚鍣ㄦ墦寮€: https://github.com/chenhg5/cc-connect/releases/latest"
-    Write-Host "  2. 鍦?Assets 鍖哄煙鎵惧埌 cc-connect-*-linux-arm64.tar"
-    Write-Host "  3. 涓嬭浇鍒版闈紙涓嶈鏀瑰悕锛?
-    Write-Host "  4. 涓嬭浇瀹屾垚鍚庨噸鏂拌繍琛屾湰鑴氭湰锛堜細鑷姩瑙ｅ帇锛?
+    Write-Host "  请手动操作："
+    Write-Host "  1. 浏览器打开: https://github.com/chenhg5/cc-connect/releases/latest"
+    Write-Host "  2. 在 Assets 区域找到 cc-connect-*-linux-arm64.tar"
+    Write-Host "  3. 下载到桌面（不要改名）"
+    Write-Host "  4. 下载完成后重新运行本脚本（会自动解压）"
     Write-Host ""
     Pause; exit 1
 }
 
-# --- 2.2 鎺ㄩ€?cc-connect 鍒版墜鏈?---
-Write-Info "鎺ㄩ€?cc-connect 鍒版墜鏈?.."
+# --- 2.2 推送 cc-connect 到手机 ---
+Write-Info "推送 cc-connect 到手机..."
 adb push $ccBin /sdcard/Download/cc-connect-linux-arm64 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    Write-Fail "鎺ㄩ€佸け璐ワ紝璇锋鏌?USB 杩炴帴鍜屾墜鏈哄瓨鍌ㄧ┖闂?
+    Write-Fail "推送失败，请检查 USB 连接和手机存储空间"
     Pause; exit 1
 }
 
-# 澶嶅埗鍒?Termux 绉佹湁鐩綍锛坮un-as 璁块棶涓嶄簡 /sdcard/锛?adb shell "cat /sdcard/Download/cc-connect-linux-arm64 | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/cc-connect-linux-arm64 && chmod +x /data/data/com.termux/files/home/cc-connect-linux-arm64'" 2>$null
+# 复制到 Termux 私有目录（run-as 访问不了 /sdcard/）
+$pipeCmd = "cat /sdcard/Download/cc-connect-linux-arm64 | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/cc-connect-linux-arm64 && chmod +x /data/data/com.termux/files/home/cc-connect-linux-arm64'"
+adb shell $pipeCmd 2>$null
 if ($LASTEXITCODE -ne 0) {
-    Write-Fail "澶嶅埗鍒?Termux 澶辫触"
+    Write-Fail "复制到 Termux 失败"
     Pause; exit 1
 }
-Write-OK "cc-connect 宸叉帹閫佸埌鎵嬫満"
+Write-OK "cc-connect 已推送到手机"
 
-# 娓呯悊涓存椂鏂囦欢
+# 清理临时文件
 if ($ccBin -ne $desktopFilePath) {
     Remove-Item $ccBin -ErrorAction SilentlyContinue
 }
 
-# --- 2.3 鎵撳寘骞舵帹閫侀」鐩枃浠?---
-Write-Info "鎵撳寘椤圭洰鏂囦欢..."
+# --- 2.3 打包并推送项目文件 ---
+Write-Info "打包项目文件..."
 Push-Location $Repo
 try {
     git archive -o $Tgz HEAD 2>$null
@@ -215,75 +220,78 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "git archive failed" }
     }
 } catch {
-    Write-Fail "鎵撳寘澶辫触锛岃纭 git 宸插畨瑁?
+    Write-Fail "打包失败，请确认 git 已安装"
     Pop-Location; Pause; exit 1
 }
 Pop-Location
-Write-OK "鎵撳寘瀹屾垚"
+Write-OK "打包完成"
 
-Write-Info "鎺ㄩ€佸埌鎵嬫満..."
+Write-Info "推送到手机..."
 adb push $Tgz /sdcard/Download/pwb-deploy.tar 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    Write-Fail "鎺ㄩ€佸け璐?
+    Write-Fail "推送失败"
     Remove-Item $Tgz -ErrorAction SilentlyContinue
     Pause; exit 1
 }
 
-Write-Info "瑙ｅ帇..."
-adb shell "rm -rf /sdcard/Download/pocket-wechat-bot && mkdir -p /sdcard/Download/pocket-wechat-bot && cd /sdcard/Download/pocket-wechat-bot && tar xf /sdcard/Download/pwb-deploy.tar && rm /sdcard/Download/pwb-deploy.tar && find . -name '*.sh' -exec sed -i 's/\r$//' {} \;" 2>$null
+Write-Info "解压到手机..."
+$extractCmd = "rm -rf /sdcard/Download/pocket-wechat-bot && mkdir -p /sdcard/Download/pocket-wechat-bot && cd /sdcard/Download/pocket-wechat-bot && tar xf /sdcard/Download/pwb-deploy.tar && rm /sdcard/Download/pwb-deploy.tar && find . -name '*.sh' -exec sed -i 's/\r`$//' {} \;"
+adb shell $extractCmd 2>$null
 if ($LASTEXITCODE -ne 0) {
-    Write-Fail "瑙ｅ帇澶辫触"
+    Write-Fail "解压失败"
     Remove-Item $Tgz -ErrorAction SilentlyContinue
     Pause; exit 1
 }
 Remove-Item $Tgz -ErrorAction SilentlyContinue
 
-# 澶嶅埗鍒?Termux
-Write-Info "澶嶅埗鍒?Termux 绉佹湁鐩綍..."
-adb shell "cd /sdcard/Download && tar czf - pocket-wechat-bot/ 2>/dev/null | run-as com.termux sh -c 'export HOME=/data/data/com.termux/files/home && cd /data/data/com.termux/files/home && rm -rf pocket-wechat-bot && tar xzf -'" 2>$null
+# 复制到 Termux
+Write-Info "复制到 Termux 私有目录..."
+$copyCmd = "cd /sdcard/Download && tar czf - pocket-wechat-bot/ 2>/dev/null | run-as com.termux sh -c 'export HOME=/data/data/com.termux/files/home && cd /data/data/com.termux/files/home && rm -rf pocket-wechat-bot && tar xzf -'"
+adb shell $copyCmd 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
-    Write-Host "  鈹屸攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?
-    Write-Host "  鈹? 鑷姩澶嶅埗澶辫触锛岄渶瑕佸湪鎵嬫満涓婃墜鍔ㄦ搷浣?         鈹?
-    Write-Host "  鈹斺攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?
+    Write-Host "  -----------------------------------------"
+    Write-Host "  自动复制失败，需要在手机上手动操作"
+    Write-Host "  -----------------------------------------"
     Write-Host ""
-    Write-Host "  鎷胯捣鎵嬫満锛屾墦寮€ Termux锛屼緷娆¤緭鍏ワ細"
+    Write-Host "  拿起手机，打开 Termux，依次输入："
     Write-Host ""
     Write-Host "    cp -r /sdcard/Download/pocket-wechat-bot ~/"
     Write-Host "    cd ~/pocket-wechat-bot"
     Write-Host "    bash scripts/setup-phone.sh"
     Write-Host ""
-    Write-Host "  鐒跺悗鎸夌収鎵嬫満绔剼鏈彁绀哄畬鎴愰儴缃层€?
+    Write-Host "  然后按照手机端脚本提示完成部署。"
     Write-Host ""
     Pause
     exit 0
 }
-Write-OK "鏂囦欢宸叉帹閫佸埌 Termux"
+Write-OK "文件已推送到 Termux"
 
 # ============================================================
-# 姝ラ 3: 鍩虹鐜瀹夎锛堝叏鑷姩锛?# ============================================================
-Write-Step 3 "鍩虹鐜瀹夎锛堝叏鑷姩锛岀害 2-5 鍒嗛挓锛?
+# 步骤 3: 基础环境安装（全自动）
+# ============================================================
+Write-Step 3 "基础环境安装（全自动，约 2-5 分钟）"
 
-Write-Info "姝ｅ湪鎵嬫満涓婂畨瑁呬緷璧栧拰閰嶇疆鐜..."
-Write-Info "锛堣繖姝ヤ笉闇€瑕佷綘鎿嶄綔锛岀◢绛?..锛?
+Write-Info "正在手机上安装依赖和配置环境..."
+Write-Info "（这步不需要你操作，稍等...）"
 Write-Host ""
 
-# 杩愯 setup-phone.sh锛堝畠浼氳嚜鍔ㄨ烦杩囧凡瀹屾垚鐨勬楠わ級
-$setupOutput = adb shell "run-as com.termux sh -c 'export HOME=/data/data/com.termux/files/home && cd /data/data/com.termux/files/home/pocket-wechat-bot && chmod +x scripts/setup-phone.sh scripts/start-bot.sh && DEPLOY_NONINTERACTIVE=1 ./scripts/setup-phone.sh'" 2>&1
-$setupExit = $LASTEXITCODE
+# 运行 setup-phone.sh
+$setupCmd = "run-as com.termux sh -c 'export HOME=/data/data/com.termux/files/home && cd /data/data/com.termux/files/home/pocket-wechat-bot && chmod +x scripts/setup-phone.sh scripts/start-bot.sh && DEPLOY_NONINTERACTIVE=1 ./scripts/setup-phone.sh'"
+$setupOutput = adb shell $setupCmd 2>&1
 
-# 瑙ｆ瀽杈撳嚭涓殑鍏抽敭鐘舵€佽
+# 解析输出
 $setupOutput -split "`n" | ForEach-Object {
     $line = $_
-    if ($line -match '^\s*\[OK\]') {
+    if ($line -match '\[OK\]') {
         Write-Host "  $line" -ForegroundColor Green
-    } elseif ($line -match '^\s*\[FAIL\]') {
+    } elseif ($line -match '\[FAIL\]') {
         Write-Host "  $line" -ForegroundColor Red
-    } elseif ($line -match '^\s*\[SKIP\]') {
+    } elseif ($line -match '\[SKIP\]') {
         Write-Host "  $line" -ForegroundColor DarkGray
-    } elseif ($line -match '^\s*\[\.\.\]') {
+    } elseif ($line -match '\[\.\.\]') {
         Write-Host "  $line" -ForegroundColor Cyan
-    } elseif ($line -match '^\s*\[!!\]') {
+    } elseif ($line -match '\[!!\]') {
         Write-Host "  $line" -ForegroundColor Yellow
     }
 }
@@ -291,283 +299,286 @@ $setupOutput -split "`n" | ForEach-Object {
 Write-Host ""
 
 # ============================================================
-# 姝ラ 4: 閰嶇疆 API Key锛圥C 绔氦浜掞級
+# 步骤 4: 配置 API Key（PC 端交互）
 # ============================================================
-Write-Step 4 "閰嶇疆 DeepSeek API Key"
+Write-Step 4 "配置 DeepSeek API Key"
 
 $apiKeySet = Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/home/.bashrc"
 
 if ($apiKeySet) {
-    Write-OK "API Key 宸查厤缃?
+    Write-OK "API Key 已配置"
 } else {
-    Write-Warn "API Key 鏈缃?
+    Write-Warn "API Key 未设置"
     Write-Host ""
-    Write-Host "  DeepSeek API Key 鑾峰彇鏂瑰紡锛?
-    Write-Host "  鎵撳紑 https://platform.deepseek.com/api_keys"
-    Write-Host "  娉ㄥ唽/鐧诲綍鍚庡垱寤?API Key锛屽鍒?sk- 寮€澶寸殑涓€涓插瓧绗?
+    Write-Host "  DeepSeek API Key 获取方式："
+    Write-Host "  打开 https://platform.deepseek.com/api_keys"
+    Write-Host "  注册/登录后创建 API Key，复制 sk- 开头的一串字符"
     Write-Host ""
 
+    $apiKey = $null
     do {
-        $apiKey = Read-Host "  璇疯緭鍏?API Key锛坰k-...锛?
+        $apiKey = Read-Host "  请输入 API Key（sk-...）"
         if (-not $apiKey -or $apiKey -notmatch '^sk-') {
-            Write-Warn "鏍煎紡涓嶆纭紙搴斾互 sk- 寮€澶达級"
+            Write-Warn "格式不正确（应以 sk- 开头）"
             $apiKey = $null
         }
     } while (-not $apiKey)
 
-    Write-Info "姝ｅ湪鍐欏叆鎵嬫満..."
+    Write-Info "正在写入手机..."
 
-    # 鍐欏叆 bashrc
-    $bashrcLine = "export ANTHROPIC_API_KEY=$apiKey"
-    Invoke-Termux "echo '$bashrcLine' >> /data/data/com.termux/files/home/.bashrc" | Out-Null
+    # 写入 bashrc
+    $bashrcLine = "echo 'export ANTHROPIC_API_KEY=$apiKey' >> /data/data/com.termux/files/home/.bashrc"
+    Invoke-Termux $bashrcLine | Out-Null
 
-    # 鏇存柊 claude 鍖呰鍣紙cc-connect 涓嶄紶閫掔幆澧冨彉閲忥級
-    $wrapper = @"
+    # 更新 claude 包装器（用 base64 避免 shell 转义问题）
+    $wrapperContent = @"
 #!/data/data/com.termux/files/usr/bin/sh
 export ANTHROPIC_API_KEY="$apiKey"
 exec /usr/bin/node /home/bin/claude-fast.js "\$@"
 "@
-    # 鐢?base64 閬垮厤 shell 杞箟闂
-    $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($wrapper))
-    Invoke-Termux "echo '$b64' | base64 -d > /data/data/com.termux/files/usr/bin/claude && chmod +x /data/data/com.termux/files/usr/bin/claude" | Out-Null
+    $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($wrapperContent))
+    $b64cmd = "echo '$b64' | base64 -d > /data/data/com.termux/files/usr/bin/claude && chmod +x /data/data/com.termux/files/usr/bin/claude"
+    Invoke-Termux $b64cmd | Out-Null
 
-    # 楠岃瘉
-    $verify = Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/home/.bashrc"
-    if ($verify) {
-        Write-OK "API Key 宸插啓鍏ユ墜鏈?
+    # 验证
+    $apiKeySet = Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/home/.bashrc"
+    if ($apiKeySet) {
+        Write-OK "API Key 已写入手机"
     } else {
-        Write-Fail "鍐欏叆澶辫触锛岃鎵嬪姩鍦?Termux 涓墽琛岋細"
+        Write-Fail "写入失败，请手动在 Termux 中执行："
         Write-Host "    echo 'export ANTHROPIC_API_KEY=$apiKey' >> ~/.bashrc"
     }
 }
 
 # ============================================================
-# 姝ラ 5: 閰嶇疆 config.toml
+# 步骤 5: 配置 config.toml
 # ============================================================
-Write-Step 5 "閰嶇疆鏂囦欢锛坈onfig.toml锛?
+Write-Step 5 "配置文件（config.toml）"
 
-# 鑾峰彇 API Key锛堜互渚垮～鍏?config.toml 妯℃澘锛?$apiKeyVal = Invoke-Termux "grep 'ANTHROPIC_API_KEY' /data/data/com.termux/files/home/.bashrc 2>/dev/null | tail -1 | sed 's/.*=//'"
+# 获取 API Key
+$apiKeyVal = Invoke-Termux "grep 'ANTHROPIC_API_KEY' /data/data/com.termux/files/home/.bashrc 2>/dev/null | tail -1 | sed 's/.*=//'"
 $apiKeyVal = $apiKeyVal.Trim()
 
-# 杩愯 step_config锛堝畠浼氱敤 bashrc 涓殑 key 鑷姩濉崰浣嶇锛?$configOut = Invoke-Termux "cd /data/data/com.termux/files/home/pocket-wechat-bot && DEPLOY_API_KEY='$apiKeyVal' bash -c 'source scripts/setup-phone.sh; step_config'"
+# 运行 step_config
+$cfgCmd = "cd /data/data/com.termux/files/home/pocket-wechat-bot && DEPLOY_API_KEY='$apiKeyVal' bash -c 'source scripts/setup-phone.sh; step_config'"
+$configOut = Invoke-Termux $cfgCmd
 Write-Host $configOut
 
-# 妫€鏌ュ墿浣欏崰浣嶇
+# 检查剩余占位符
 $remaining = Invoke-Termux "grep -c '<YOUR_' /data/data/com.termux/files/home/.cc-connect/config.toml 2>/dev/null || echo 0"
 $remaining = $remaining.Trim()
 
 if ($remaining -eq "0") {
-    Write-OK "config.toml 宸插畬鏁寸敓鎴?
+    Write-OK "config.toml 已完整生成"
 } else {
-    Write-Warn "config.toml 杩樻湁 $remaining 涓崰浣嶇寰呭～鍐?
+    Write-Warn "config.toml 还有 $remaining 个占位符待填写"
     $placeholders = Invoke-Termux "grep '<YOUR_' /data/data/com.termux/files/home/.cc-connect/config.toml"
     Write-Host "  $placeholders"
     Write-Host ""
-    Write-Host "  绋嶅悗浼氬湪涓嬩竴姝ヨ幏鍙栧井淇″嚟鎹紝瀹屾垚鍚庤嚜鍔ㄥ～鍏ャ€?
-    Write-Host "  OpenID 鍙互鍦?bot 鍚姩鍚庡彂 /whoami 鑾峰彇銆?
+    Write-Host "  稍后会在下一步获取微信凭据，完成后自动填入。"
+    Write-Host "  OpenID 可以在 bot 启动后发 /whoami 获取。"
 }
 
 # ============================================================
-# 姝ラ 6: 寰俊鍑嵁
+# 步骤 6: 微信凭据
 # ============================================================
-Write-Step 6 "寰俊鎵爜鑾峰彇鍑嵁"
+Write-Step 6 "微信扫码获取凭据"
 
 $tokenOk = Test-Termux "grep -q 'token = \"wx_' /data/data/com.termux/files/home/.cc-connect/config.toml"
 
 if ($tokenOk) {
     $token = Invoke-Termux "grep 'token = ' /data/data/com.termux/files/home/.cc-connect/config.toml | head -1 | sed 's/.*= \"//;s/\"//'"
-    Write-OK "寰俊鍑嵁宸查厤缃? $($token.Trim())"
+    Write-OK "微信凭据已配置: $($token.Trim())"
 } else {
-    Write-Warn "寰俊鍑嵁鏈厤缃?
+    Write-Warn "微信凭据未配置"
 
     Write-Host ""
-    Write-Host "  鈹屸攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?
-    Write-Host "  鈹? 鐜板湪闇€瑕佹嬁璧锋墜鏈烘搷浣?                       鈹?
-    Write-Host "  鈹斺攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?
+    Write-Host "  -----------------------------------------"
+    Write-Host "  现在需要拿起手机操作"
+    Write-Host "  -----------------------------------------"
     Write-Host ""
-    Write-Host "  鍦ㄦ墜鏈?Termux 涓繍琛屼互涓嬪懡浠わ細"
+    Write-Host "  在手机 Termux 中运行以下命令："
     Write-Host ""
     Write-Host "    ~/bin/cc-connect weixin setup --project nene"
     Write-Host ""
-    Write-Host "  浼氭樉绀轰竴涓簩缁寸爜閾炬帴銆?
-    Write-Host "  1. 鍦ㄦ墜鏈烘祻瑙堝櫒鎵撳紑璇ラ摼鎺?
-    Write-Host "  2. 鐢ㄤ綘鐨勫井淇″皬鍙锋壂鎻?
-    Write-Host "  3. 鎵爜鎴愬姛鍚庯紝Termux 浼氭樉绀?token 鍜?account_id"
+    Write-Host "  会显示一个二维码链接。"
+    Write-Host "  1. 在手机浏览器打开该链接"
+    Write-Host "  2. 用你的微信小号扫描"
+    Write-Host "  3. 扫码成功后，Termux 会显示 token 和 account_id"
     Write-Host ""
 
     do {
-        Read-Host "  鎵爜瀹屾垚鍚庯紝鎸夊洖杞︾户缁?
+        Read-Host "  扫码完成后，按回车继续"
 
-        # 妫€鏌?token 鏄惁宸茶嚜鍔ㄥ～鍏?config.toml
-        # (cc-connect 鎵爜鎴愬姛鍚庝細鍒锋柊 config.toml)
         $tokenCheck = Invoke-Termux "grep -o 'wx_[a-zA-Z0-9_-]*' /data/data/com.termux/files/home/.cc-connect/config.toml 2>/dev/null | head -1"
         $tokenCheck = $tokenCheck.Trim()
 
         if ($tokenCheck -and $tokenCheck -ne '<YOUR_BOT_TOKEN>') {
-            Write-OK "妫€娴嬪埌 token: $tokenCheck"
+            Write-OK "检测到 token: $tokenCheck"
+            $tokenOk = $true
             break
         }
 
-        # 灏濊瘯浠庢壂鎻忔棩蹇楁彁鍙?        $scanToken = Invoke-Termux "cat /data/data/com.termux/files/home/.cc-connect/cc-connect.log 2>/dev/null | grep -o 'wx_[a-zA-Z0-9_-]*' | head -1"
+        $scanToken = Invoke-Termux "cat /data/data/com.termux/files/home/cc-connect/cc-connect.log 2>/dev/null | grep -o 'wx_[a-zA-Z0-9_-]*' | head -1"
         $scanToken = $scanToken.Trim()
         if ($scanToken) {
-            # 鑷姩濉叆 config.toml
-            Invoke-Termux "sed -i 's|<YOUR_BOT_TOKEN>|$scanToken|g' /data/data/com.termux/files/home/.cc-connect/config.toml" | Out-Null
-            Write-OK "宸蹭粠鏃ュ織鎻愬彇 token: $scanToken"
+            $sedCmd = "sed -i 's|<YOUR_BOT_TOKEN>|$scanToken|g' /data/data/com.termux/files/home/.cc-connect/config.toml"
+            Invoke-Termux $sedCmd | Out-Null
+            Write-OK "已从日志提取 token: $scanToken"
+            $tokenOk = $true
             break
         }
 
-        Write-Warn "灏氭湭妫€娴嬪埌 token"
-        Write-Host "  璇风‘璁わ細"
-        Write-Host "    1. 宸插湪 Termux 涓繍琛屼簡鎵爜鍛戒护"
-        Write-Host "    2. 宸茬敤寰俊鎵弿浜嗕簩缁寸爜"
-        Write-Host "    3. 缁堢鏄剧ず浜?'token:' 鍜?'account_id:'"
+        Write-Warn "尚未检测到 token"
+        Write-Host "  请确认："
+        Write-Host "    1. 已在 Termux 中运行了扫码命令"
+        Write-Host "    2. 已用微信扫描了二维码"
+        Write-Host "    3. 终端显示了 'token:' 和 'account_id:'"
         Write-Host ""
 
-        $retry = Read-Host "  閲嶈瘯锛熸寜鍥炶溅閲嶈瘯锛岃緭鍏?s 璺宠繃 [s]"
+        $retry = Read-Host "  重试？按回车重试，输入 s 跳过 [s]"
         if ($retry -eq 's') {
-            Write-Warn "宸茶烦杩囥€傜◢鍚庡彲鎵嬪姩缂栬緫 ~/.cc-connect/config.toml"
+            Write-Warn "已跳过。稍后可手动编辑 ~/.cc-connect/config.toml"
             break
         }
     } while ($true)
 }
 
 # ============================================================
-# 姝ラ 7: 鍚姩 Bot
+# 步骤 7: 启动 Bot
 # ============================================================
-Write-Step 7 "鍚姩 Bot"
+Write-Step 7 "启动 Bot"
 
-Write-Info "閮ㄧ讲鍚姩鑴氭湰..."
+Write-Info "部署启动脚本..."
 $startOut = Invoke-Termux "cd /data/data/com.termux/files/home/pocket-wechat-bot && bash -c 'source scripts/setup-phone.sh; step_startup'"
 Write-Host $startOut
 
-Write-Info "姝ｅ湪鍚姩 cc-connect..."
+Write-Info "正在启动 cc-connect..."
 $launchOut = Invoke-Termux "cd /data/data/com.termux/files/home/pocket-wechat-bot && bash -c 'source scripts/setup-phone.sh; step_launch'"
 Write-Host $launchOut
 
-# 楠岃瘉
+# 验证
 $running = Test-Termux "pgrep -f cc-connect"
 if ($running) {
-    Write-OK "Bot 姝ｅ湪杩愯"
+    Write-OK "Bot 正在运行"
 } else {
-    Write-Warn "Bot 鏈兘鍚姩锛屽彲鑳藉洜涓虹己灏戦厤缃?
-    Write-Host "  瀹屾垚涓嬫柟寰呭姙浜嬮」鍚庨噸璺?deploy.bat 鍗冲彲"
+    Write-Warn "Bot 未能启动，可能因为缺少配置"
+    Write-Host "  完成下方待办事项后重跑 deploy.bat 即可"
 }
 
 # ============================================================
-# 姝ラ 8: OpenID 閰嶇疆
+# 步骤 8: OpenID 配置
 # ============================================================
-Write-Step 8 "閰嶇疆 OpenID"
+Write-Step 8 "配置 OpenID"
 
 $openidOk = Test-Termux "test -f /data/data/com.termux/files/home/cc-connect/CLAUDE.md && ! grep -q '<YOUR_WECHAT_OPENID>' /data/data/com.termux/files/home/cc-connect/CLAUDE.md"
 
 if ($openidOk) {
-    Write-OK "OpenID 宸查厤缃?
+    Write-OK "OpenID 已配置"
 } else {
-    Write-Warn "OpenID 鍗犱綅绗︽湭鏇挎崲"
+    Write-Warn "OpenID 占位符未替换"
     Write-Host ""
-    Write-Host "  璇峰厛鍦ㄥ井淇￠噷缁?Bot 鍙戜竴鏉℃秷鎭紙浠绘剰鍐呭锛夈€?
+    Write-Host "  请先在微信里给 Bot 发一条消息（任意内容）。"
     Write-Host ""
 
     do {
-        Read-Host "  鍙戝畬鍚庢寜鍥炶溅"
+        Read-Host "  发完后按回车"
 
-        # 杩愯 fix-openid.sh
         $fixOut = Invoke-Termux "bash /data/data/com.termux/files/home/pocket-wechat-bot/scripts/fix-openid.sh"
         Write-Host $fixOut
 
         $openidOk = Test-Termux "test -f /data/data/com.termux/files/home/cc-connect/CLAUDE.md && ! grep -q '<YOUR_WECHAT_OPENID>' /data/data/com.termux/files/home/cc-connect/CLAUDE.md"
         if ($openidOk) {
-            Write-OK "OpenID 宸茶嚜鍔ㄥ～鍏?
+            Write-OK "OpenID 已自动填入"
             break
         }
 
-        Write-Warn "鏈兘浠庢棩蹇楁彁鍙?OpenID"
-        Write-Host "  璇风‘璁ゅ凡缁?Bot 鍙戦€佷簡娑堟伅"
-        Write-Host "  涔熷彲浠ュ湪 Termux 涓墜鍔ㄨ繍琛? bash ~/pocket-wechat-bot/scripts/fix-openid.sh"
+        Write-Warn "未能从日志提取 OpenID"
+        Write-Host "  请确认已给 Bot 发送了消息"
+        Write-Host "  也可以在 Termux 中手动运行: bash ~/pocket-wechat-bot/scripts/fix-openid.sh"
 
-        $retry = Read-Host "  閲嶈瘯锛熸寜鍥炶溅閲嶈瘯锛岃緭鍏?s 璺宠繃 [s]"
+        $retry = Read-Host "  重试？按回车重试，输入 s 跳过 [s]"
         if ($retry -eq 's') {
-            Write-Warn "宸茶烦杩囥€傜◢鍚庡彲鎵嬪姩杩愯 fix-openid.sh"
+            Write-Warn "已跳过。稍后可手动运行 fix-openid.sh"
             break
         }
     } while ($true)
 }
 
 # ============================================================
-# 姝ラ 9: 鏀跺熬妫€鏌ユ竻鍗?# ============================================================
-Write-Step 9 "閮ㄧ讲鍚庢鏌ユ竻鍗?
+# 步骤 9: 收尾检查清单
+# ============================================================
+Write-Step 9 "部署后检查清单"
 
 Write-Host ""
-Write-Host "  鈹€鈹€鈹€ 鐘舵€佹鏌?鈹€鈹€鈹€"
+Write-Host "  --- 状态检查 ---"
 Write-Host ""
 
 # API Key
 if (Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/home/.bashrc") {
-    Write-OK "API Key         宸茶缃?
+    Write-OK "API Key         已设置"
 } else {
-    Write-Fail "API Key         鏈缃?
-    Write-Host "                   echo 'export ANTHROPIC_API_KEY=sk-浣犵殑key' >> ~/.bashrc"
+    Write-Fail "API Key         未设置"
+    Write-Host "                   echo 'export ANTHROPIC_API_KEY=sk-你的key' >> ~/.bashrc"
 }
 
 # config.toml
 $rem = Invoke-Termux "grep -c '<YOUR_' /data/data/com.termux/files/home/.cc-connect/config.toml 2>/dev/null || echo 0"
 if ($rem.Trim() -eq "0") {
-    Write-OK "config.toml     宸插～鍐欏畬鏁?
+    Write-OK "config.toml     已填写完整"
 } else {
-    Write-Fail "config.toml     杩樻湁鍗犱綅绗?
+    Write-Fail "config.toml     还有占位符"
     Write-Host "                   nano ~/.cc-connect/config.toml"
 }
 
-# 寰俊鍑嵁
+# 微信凭据
 if (Test-Termux "grep -q 'token = \"wx_' /data/data/com.termux/files/home/.cc-connect/config.toml") {
-    Write-OK "寰俊鍑嵁        宸查厤缃?
+    Write-OK "微信凭据        已配置"
 } else {
-    Write-Fail "寰俊鍑嵁        鏈厤缃?
+    Write-Fail "微信凭据        未配置"
     Write-Host "                   ~/bin/cc-connect weixin setup --project nene"
 }
 
 # OpenID
 if ($openidOk) {
-    Write-OK "OpenID          宸查厤缃?
+    Write-OK "OpenID          已配置"
 } else {
-    Write-Fail "OpenID          鏈厤缃?
-    Write-Host "                   鍙戞秷鎭悗杩愯: bash ~/pocket-wechat-bot/scripts/fix-openid.sh"
+    Write-Fail "OpenID          未配置"
+    Write-Host "                   发消息后运行: bash ~/pocket-wechat-bot/scripts/fix-openid.sh"
 }
 
-# Bot 杩愯
+# Bot 运行
 if ($running) {
-    Write-OK "Bot 杩愯涓?      YES"
+    Write-OK "Bot 运行中       YES"
 } else {
-    Write-Fail "Bot 杩愯涓?      NO"
-    Write-Host "                   瀹屾垚閰嶇疆鍚庨噸璺?deploy.bat"
+    Write-Fail "Bot 运行中       NO"
+    Write-Host "                   完成配置后重跑 deploy.bat"
 }
 
 Write-Host ""
-Write-Host "  鈹€鈹€鈹€ 蹇呴』鎵嬪姩瀹屾垚 鈹€鈹€鈹€"
+Write-Host "  --- 必须手动完成 ---"
 Write-Host ""
-Write-Host "  [ ] 鍏抽棴 Android 鐪佺數闄愬埗"
-Write-Host "      璁剧疆 -> 搴旂敤 -> Termux -> 鍚庡彴鑰楃數绠＄悊 -> 鍏佽鍚庡彴杩愯"
-Write-Host "      锛堜笉鍏崇殑璇?Android 鍙兘闅忔椂鏉€鎺?bot锛?
+Write-Host "  [ ] 关闭 Android 省电限制"
+Write-Host "      设置 -> 应用 -> Termux -> 后台耗电管理 -> 允许后台运行"
+Write-Host "      （不关的话 Android 可能随时杀掉 bot）"
 Write-Host ""
 
-Write-Host "  鈹€鈹€鈹€ 甯哥敤鎿嶄綔 鈹€鈹€鈹€"
-Write-Host "  鏌ョ湅鏃ュ織:  cat ~/cc-connect/cc-connect.log"
-Write-Host "  鍓嶅彴杩愯:  bash ~/start-nene.sh"
-Write-Host "  閲嶅惎 bot:  pkill -f cc-connect && bash ~/start-nene.sh"
-Write-Host "  绠＄悊闈㈡澘:  http://127.0.0.1:9820"
-Write-Host "  閲嶆柊閮ㄧ讲:  鍐嶆鍙抽敭杩愯鏈剼鏈紙宸插畬鎴愮殑姝ラ鑷姩璺宠繃锛?
+Write-Host "  --- 常用操作 ---"
+Write-Host "  查看日志:  cat ~/cc-connect/cc-connect.log"
+Write-Host "  重启 bot:  pkill -f cc-connect && bash ~/start-nene.sh"
+Write-Host "  管理面板:  http://127.0.0.1:9820"
+Write-Host "  重新部署:  再次右键运行本脚本（已完成的步骤自动跳过）"
 Write-Host ""
 
 $allGood = $apiKeySet -and ($rem.Trim() -eq "0") -and $tokenOk -and $openidOk -and $running
 if ($allGood) {
-    Write-Host "鈺斺晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晽" -ForegroundColor Green
-    Write-Host "鈺? 鍏ㄩ儴灏辩华锛佸井淇＄粰 Bot 鍙戞潯娑堟伅璇曡瘯鍚       鈺? -ForegroundColor Green
-    Write-Host "鈺氣晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨暆" -ForegroundColor Green
+    Write-Host "=============================================" -ForegroundColor Green
+    Write-Host "  全部就绪！微信给 Bot 发条消息试试吧~" -ForegroundColor Green
+    Write-Host "=============================================" -ForegroundColor Green
 } else {
-    Write-Host "鈺斺晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晽" -ForegroundColor Yellow
-    Write-Host "鈺? 杩樻湁寰呭姙椤广€傚畬鎴愬悗閲嶈窇 deploy.bat 鍗冲彲銆?   鈺? -ForegroundColor Yellow
-    Write-Host "鈺氣晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨暆" -ForegroundColor Yellow
+    Write-Host "=============================================" -ForegroundColor Yellow
+    Write-Host "  还有待办项。完成后重跑 deploy.bat 即可。" -ForegroundColor Yellow
+    Write-Host "=============================================" -ForegroundColor Yellow
 }
 
 Write-Host ""
