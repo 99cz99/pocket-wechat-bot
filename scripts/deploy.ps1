@@ -1,4 +1,4 @@
-# deploy.ps1 - 一键部署微信 AI 机器人到 Android 手机
+﻿# deploy.ps1 - 一键部署微信 AI 机器人到 Android 手机
 # 用法: 右键 -> 使用 PowerShell 运行
 # 需要: adb + USB 连接 + 手机已装 Termux
 
@@ -19,7 +19,7 @@ if (-not (Get-Command adb -ErrorAction SilentlyContinue)) {
     Write-Host "    https://developer.android.com/studio/releases/platform-tools"
     Pause; exit 1
 }
-$devices = adb devices 2>$null | Select-String "device$"
+$devices = adb devices 2>$null | Select-String 'device$'
 if (-not $devices) {
     Write-Host "[!] 未检测到手机，请确认："
     Write-Host "    1. USB 已连接"
@@ -137,9 +137,9 @@ Write-Host "║  部署完成！还需手动完成以下 2 步：            ║
 Write-Host "╚══════════════════════════════════════════════╝"
 Write-Host ""
 Write-Host "第 1 步：关闭 Android 对 Termux 的省电限制"
-Write-Host "  设置 > 应用 > 应用管理 > Termux"
-Write-Host "  > 耗电/电量 > 后台耗电管理"
-Write-Host "  > 改为"允许后台运行""
+Write-Host '  设置 -> 应用 -> 应用管理 -> Termux'
+Write-Host '  -> 耗电/电量 -> 后台耗电管理'
+Write-Host '  -> 改为 允许后台运行'
 Write-Host "  （不关的话 Android 可能随时杀掉 bot）"
 Write-Host ""
 Write-Host "第 2 步：在微信里给 bot 发一条消息测试"
