@@ -13,7 +13,7 @@ $Tgz = "$env:TEMP\pwb-deploy.tar"
 # 在手机上通过 run-as 执行命令，返回输出
 function Invoke-Termux($Cmd) {
     $escaped = $Cmd -replace "'", "'\''"
-    $result = adb shell "run-as com.termux sh -c 'export HOME=/data/data/com.termux/files/home; $escaped'" 2>&1
+    $result = adb shell "run-as com.termux sh -c 'export HOME=/data/data/com.termux/files/home PATH=/data/data/com.termux/files/usr/bin:`$PATH; $escaped'" 2>&1
     $script:LastExitOk = ($LASTEXITCODE -eq 0)
     return $result
 }
@@ -360,7 +360,7 @@ $apiKeyVal = Invoke-Termux "grep 'ANTHROPIC_API_KEY' /data/data/com.termux/files
 $apiKeyVal = $apiKeyVal.Trim()
 
 # 运行 step_config
-$cfgCmd = "cd /data/data/com.termux/files/home/pocket-wechat-bot && DEPLOY_API_KEY='$apiKeyVal' bash -c 'source scripts/setup-phone.sh; step_config'"
+$cfgCmd = "cd /data/data/com.termux/files/home/pocket-wechat-bot && DEPLOY_API_KEY='$apiKeyVal' /data/data/com.termux/files/usr/bin/bash -c 'source scripts/setup-phone.sh; step_config'"
 $configOut = Invoke-Termux $cfgCmd
 Write-Host $configOut
 
@@ -461,11 +461,11 @@ if ($tokenOk) {
 Write-Step 7 "启动 Bot"
 
 Write-Info "部署启动脚本..."
-$startOut = Invoke-Termux "cd /data/data/com.termux/files/home/pocket-wechat-bot && bash -c 'source scripts/setup-phone.sh; step_startup'"
+$startOut = Invoke-Termux "cd /data/data/com.termux/files/home/pocket-wechat-bot && /data/data/com.termux/files/usr/bin/bash -c 'source scripts/setup-phone.sh; step_startup'"
 Write-Host $startOut
 
 Write-Info "正在启动 cc-connect..."
-$launchOut = Invoke-Termux "cd /data/data/com.termux/files/home/pocket-wechat-bot && bash -c 'source scripts/setup-phone.sh; step_launch'"
+$launchOut = Invoke-Termux "cd /data/data/com.termux/files/home/pocket-wechat-bot && /data/data/com.termux/files/usr/bin/bash -c 'source scripts/setup-phone.sh; step_launch'"
 Write-Host $launchOut
 
 # 验证
