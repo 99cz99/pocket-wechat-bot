@@ -51,7 +51,21 @@ $desktopFile = [Environment]::GetFolderPath("Desktop") + "\cc-connect-linux-arm6
 # 1) 先检查桌面是否已有
 if (Test-Path $desktopFile) {
     Write-Host "[*] 检测到桌面文件: $desktopFile"
-    $ccBin = $desktopFile
+    # 检查是否为 ELF 二进制（0x7f 'E' 'L' 'F'）
+    $magic = [System.IO.File]::ReadAllBytes($desktopFile)[0..3]
+    if ($magic[0] -eq 0x7f -and $magic[1] -eq 0x45) {
+        $ccBin = $desktopFile
+    } elseif ($desktopFile -match "\.(gz|zip|tar)$") {
+        Write-Host "[!] 你下载的是 Source code 压缩包，不是二进制文件"
+        Write-Host "    GitHub Release 页面往下滑，在 Assets 里找:"
+        Write-Host "    cc-connect-linux-arm64 （约 20MB，无后缀）"
+        Write-Host "    下载后放到桌面，重试"
+        Pause; exit 1
+    } else {
+        Write-Host "[!] 桌面文件无法识别为 cc-connect 二进制"
+        Write-Host "    请确认: 从 GitHub Assets 下载 cc-connect-linux-arm64"
+        Pause; exit 1
+    }
 }
 # 2) 尝试 PC 自动下载
 if (-not $ccBin) {
