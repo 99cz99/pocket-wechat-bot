@@ -38,7 +38,7 @@ echo [*] Termux check...
 adb shell "pm list packages com.termux" 2>nul | find "com.termux" >nul
 if errorlevel 1 (
     echo [!] Termux not installed on phone.
-    echo     Install: https://f-droid.org/packages/com.termux/
+    echo     Install from F-Droid: https://f-droid.org/packages/com.termux/
     echo     Also install Termux:API from F-Droid.
     pause
     exit /b 1
@@ -87,14 +87,26 @@ echo [*] Copying into Termux...
 adb shell "cd /sdcard/Download && tar czf - pocket-wechat-bot/ 2>/dev/null | run-as com.termux sh -c 'cd ~ && rm -rf pocket-wechat-bot && tar xzf -'" 2>nul
 if errorlevel 1 (
     echo.
-    echo  [!] Cannot auto-copy into Termux
-    echo      (run-as not available - Android 14+ / non-Debug Termux)
+    echo  +--------------------------------------------------+
+    echo  ^|  Phone-side setup needed                         ^|
+    echo  +--------------------------------------------------+
     echo.
-    echo  Files are at: /sdcard/Download/pocket-wechat-bot/
+    echo  Now pick up your phone and open the Termux app.
+    echo  You'll see a terminal with a $ prompt.
+    echo  Type these 3 commands, one by one:
     echo.
-    echo  Run these commands in Termux to finish:
-    echo    cp -r /sdcard/Download/pocket-wechat-bot ~/
-    echo    cd ~/pocket-wechat-bot ^&^& bash scripts/setup-phone.sh
+    echo  +--------------------------------------------------+
+    echo  ^|                                                  ^|
+    echo  ^|  cp -r /sdcard/Download/pocket-wechat-bot ~/     ^|
+    echo  ^|                                                  ^|
+    echo  ^|  cd ~/pocket-wechat-bot                          ^|
+    echo  ^|                                                  ^|
+    echo  ^|  bash scripts/setup-phone.sh                     ^|
+    echo  ^|                                                  ^|
+    echo  +--------------------------------------------------+
+    echo.
+    echo  The setup script will install everything and ask
+    echo  you a few questions along the way. Takes 3-5 min.
     echo.
     goto done
 )
@@ -123,19 +135,22 @@ echo  ----------------------------------------
 REM ----- Done -----
 :done
 echo.
-echo  ==========================================
-echo    Next steps (manual):
-echo  ==========================================
+echo  +--------------------------------------------------+
+echo  ^|  Almost done. 3 more things to do on the phone:  ^|
+echo  +--------------------------------------------------+
 echo.
-echo  1. WeChat QR scan:
-echo     ~/bin/cc-connect weixin setup --project nene
+echo  In Termux, run this to scan a QR code with WeChat:
 echo.
-echo  2. Fill token/account_id into config:
-echo     nano ~/.cc-connect/config.toml
+echo    ~/bin/cc-connect weixin setup --project nene
 echo.
-echo  3. Disable battery optimization:
-echo     Settings ^> Apps ^> Termux ^> Battery
+echo  After scanning, fill the token into config:
 echo.
-echo  4. Test: send WeChat msg to your bot
+echo    nano ~/.cc-connect/config.toml
+echo.
+echo  Finally, stop Android from killing the bot:
+echo    Phone Settings ^> Apps ^> Termux ^> Battery
+echo    Set to "Allow background running"
+echo.
+echo  Then send a WeChat message to your bot to test!
 echo.
 pause
