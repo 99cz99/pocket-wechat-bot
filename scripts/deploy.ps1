@@ -119,8 +119,34 @@ if ($isRerun) {
 # ============================================================
 Write-Step 2 "推送文件到手机"
 
+# 获取当前版本（git commit hash），用于判断是否需要重新推送
+$currentHash = (git -C $Repo rev-parse --short HEAD 2>$null) -replace '\s', ''
+if (-not $currentHash) { $currentHash = "unknown" }
+
+# 检查手机上的版本是否已是最新
+$phoneHash = Invoke-Termux "cat $PhoneRepo/.deploy-version 2>/dev/null"
+if ($phoneHash) { $phoneHash = $phoneHash.Trim() }
+$skipPush = $false
+
+if ($phoneHash -eq $currentHash) {
+    $keyFilesOk = Test-Termux "test -x $PhoneRepo/scripts/setup-phone.sh -a -f $PhoneRepo/config/config.toml.template"
+    $ccExists = Test-Termux "test -x /data/data/com.termux/files/home/bin/cc-connect"
+    if ($keyFilesOk -and $ccExists) {
+        Write-OK "文件已是最新（$currentHash），跳过推送"
+        $skipPush = $true
+    } else {
+        if (-not $keyFilesOk) { Write-Warn "关键文件缺失，重新推送..." }
+        if (-not $ccExists) { Write-Warn "cc-connect 缺失，重新推送..." }
+    }
+}
+
+if ($phoneHash -ne $currentHash -and $phoneHash) {
+    Write-Info "版本变更: $phoneHash -> $currentHash"
+}
+
 # --- 2.1 获取 cc-connect 二进制 ---
-Write-Info "查找 cc-connect 二进制..."
+if (-not $skipPush) {
+    Write-Info "查找 cc-connect 二进制..."
 $ccBin = $null
 $ccUrl = "https://github.com/chenhg5/cc-connect/releases/latest/download/cc-connect-linux-arm64"
 $desktopDir = [Environment]::GetFolderPath("Desktop")
@@ -274,25 +300,30 @@ if ($LASTEXITCODE -ne 0) {
     Pause
     exit 0
 }
-Write-OK "文件已推送到 Termux"
+    Write-OK "文件已推送到 Termux"
 
-# 验证关键文件（config.toml.template 可能因 tar/pipe 问题丢失）
-$tplExists = Test-Termux "test -f $PhoneRepo/config/config.toml.template"
-if (-not $tplExists) {
-    Write-Warn "config.toml.template 未成功推送到手机，正在补推..."
-    $localTpl = "$Repo\config\config.toml.template"
-    if (Test-Path $localTpl) {
-        adb push $localTpl /sdcard/Download/config.toml.template 2>&1 | Out-Null
-        $fixTplCmd = "cat /sdcard/Download/config.toml.template | run-as com.termux sh -c 'mkdir -p $PhoneRepo/config && cat > $PhoneRepo/config/config.toml.template'"
-        adb shell $fixTplCmd 2>$null
-        if (Test-Termux "test -f $PhoneRepo/config/config.toml.template") {
-            Write-OK "config.toml.template 已补推"
+    # 验证关键文件（config.toml.template 可能因 tar/pipe 问题丢失）
+    $tplExists = Test-Termux "test -f $PhoneRepo/config/config.toml.template"
+    if (-not $tplExists) {
+        Write-Warn "config.toml.template 未成功推送到手机，正在补推..."
+        $localTpl = "$Repo\config\config.toml.template"
+        if (Test-Path $localTpl) {
+            adb push $localTpl /sdcard/Download/config.toml.template 2>&1 | Out-Null
+            $fixTplCmd = "cat /sdcard/Download/config.toml.template | run-as com.termux sh -c 'mkdir -p $PhoneRepo/config && cat > $PhoneRepo/config/config.toml.template'"
+            adb shell $fixTplCmd 2>$null
+            if (Test-Termux "test -f $PhoneRepo/config/config.toml.template") {
+                Write-OK "config.toml.template 已补推"
+            } else {
+                Write-Warn "补推失败，后续将尝试使用现有 config.toml"
+            }
         } else {
-            Write-Warn "补推失败，后续将尝试使用现有 config.toml"
+            Write-Warn "本地找不到 config.toml.template，跳过"
         }
-    } else {
-        Write-Warn "本地找不到 config.toml.template，跳过"
     }
+
+    # 写入版本标记，下次运行可跳过推送
+    Invoke-Termux "echo '$currentHash' > $PhoneRepo/.deploy-version" | Out-Null
+    Write-OK "版本标记: $currentHash"
 }
 
 # ============================================================
