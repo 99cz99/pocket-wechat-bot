@@ -70,7 +70,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "[*] 正在解压..."
-adb shell "rm -rf /sdcard/Download/pocket-wechat-bot && mkdir -p /sdcard/Download/pocket-wechat-bot && cd /sdcard/Download/pocket-wechat-bot && tar xf /sdcard/Download/pwb-deploy.tar && rm /sdcard/Download/pwb-deploy.tar"
+adb shell "rm -rf /sdcard/Download/pocket-wechat-bot && mkdir -p /sdcard/Download/pocket-wechat-bot && cd /sdcard/Download/pocket-wechat-bot && tar xf /sdcard/Download/pwb-deploy.tar && rm /sdcard/Download/pwb-deploy.tar && find . -name '*.sh' -exec sed -i 's/\r$//' {} \;"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[!] 解压失败"
     Remove-Item $Tgz -ErrorAction SilentlyContinue
@@ -124,7 +124,7 @@ Write-Host "----------------------------------------"
 Write-Host "  手机端输出："
 Write-Host "----------------------------------------"
 Write-Host ""
-adb shell "run-as com.termux sh -c 'cd /data/data/com.termux/files/home/pocket-wechat-bot && chmod +x scripts/setup-phone.sh && DEPLOY_NONINTERACTIVE=1 ./scripts/setup-phone.sh'"
+adb shell "run-as com.termux sh -c 'cd /data/data/com.termux/files/home/pocket-wechat-bot && chmod +x scripts/setup-phone.sh scripts/start-bot.sh && DEPLOY_NONINTERACTIVE=1 ./scripts/setup-phone.sh'"
 Write-Host ""
 Write-Host "----------------------------------------"
 Write-Host "  手机端输出结束"
