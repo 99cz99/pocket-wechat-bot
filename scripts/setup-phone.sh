@@ -431,13 +431,17 @@ step_config() {
     local tpl="$REPO_DIR/config/config.toml.template"
 
     if [ ! -f "$tpl" ]; then
-        err "找不到 config.toml.template（路径：$tpl）"
+        if [ -f "$cfg" ]; then
+            warn "找不到 config.toml.template，使用现有 config.toml"
+        else
+            err "找不到 config.toml.template（路径：$tpl），且 config.toml 也不存在"
+        fi
     fi
 
-    if [ -f "$cfg" ]; then
-        info "config.toml 已存在，跳过覆盖"
-    else
+    if [ -f "$tpl" ] && [ ! -f "$cfg" ]; then
         cp "$tpl" "$cfg"
+    elif [ -f "$tpl" ] && [ -f "$cfg" ]; then
+        info "config.toml 已存在，跳过覆盖"
     fi
 
     # 收集值：环境变量优先，其次从 bashrc 提取

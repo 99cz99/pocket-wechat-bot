@@ -276,6 +276,25 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-OK "文件已推送到 Termux"
 
+# 验证关键文件（config.toml.template 可能因 tar/pipe 问题丢失）
+$tplExists = Test-Termux "test -f $PhoneRepo/config/config.toml.template"
+if (-not $tplExists) {
+    Write-Warn "config.toml.template 未成功推送到手机，正在补推..."
+    $localTpl = "$Repo\config\config.toml.template"
+    if (Test-Path $localTpl) {
+        adb push $localTpl /sdcard/Download/config.toml.template 2>&1 | Out-Null
+        $fixTplCmd = "cat /sdcard/Download/config.toml.template | run-as com.termux sh -c 'mkdir -p $PhoneRepo/config && cat > $PhoneRepo/config/config.toml.template'"
+        adb shell $fixTplCmd 2>$null
+        if (Test-Termux "test -f $PhoneRepo/config/config.toml.template") {
+            Write-OK "config.toml.template 已补推"
+        } else {
+            Write-Warn "补推失败，后续将尝试使用现有 config.toml"
+        }
+    } else {
+        Write-Warn "本地找不到 config.toml.template，跳过"
+    }
+}
+
 # ============================================================
 # 步骤 3: 基础环境安装（全自动）
 # ============================================================
@@ -416,6 +435,22 @@ if ($tokenOk) {
     Write-Info "正在手机上创建扫码快捷脚本..."
     $scanScript = @'
 #!/data/data/com.termux/files/usr/bin/bash
+# 确保 SSL 证书目录存在（proot bind mount 需要）
+if [ ! -d ~/proot-fs/etc/ssl ] || [ -z "$(ls -A ~/proot-fs/etc/ssl 2>/dev/null)" ]; then
+    echo "[*] 准备 SSL 证书..."
+    mkdir -p ~/proot-fs/etc/ssl
+    if [ -d /data/data/com.termux/files/usr/etc/tls ] && [ -n "$(ls -A /data/data/com.termux/files/usr/etc/tls 2>/dev/null)" ]; then
+        cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/
+    else
+        echo "[!] 警告：未找到 TLS 证书，请运行: pkg install ca-certificates -y"
+    fi
+fi
+# 确保 DNS 配置存在
+if [ ! -s /data/local/tmp/resolv.conf ]; then
+    echo "[*] 写入 DNS 配置..."
+    echo "nameserver 114.114.114.114" > /data/local/tmp/resolv.conf 2>/dev/null
+    echo "nameserver 223.5.5.5" >> /data/local/tmp/resolv.conf 2>/dev/null
+fi
 echo "正在获取微信登录二维码..."
 proot \
   -b /data/local/tmp/resolv.conf:/etc/resolv.conf \
