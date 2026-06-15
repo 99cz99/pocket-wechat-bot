@@ -403,14 +403,34 @@ if ($tokenOk) {
         Write-OK "DNS 正常"
     }
 
+    # 在手机上创建扫码快捷脚本（避免用户手打长命令）
+    Write-Info "正在手机上创建扫码快捷脚本..."
+    $scanScript = @'
+#!/data/data/com.termux/files/usr/bin/bash
+echo "正在获取微信登录二维码..."
+proot \
+  -b /data/local/tmp/resolv.conf:/etc/resolv.conf \
+  -b ~/proot-fs/etc/ssl:/etc/ssl \
+  -b /data/data/com.termux/files/usr:/usr \
+  -b ~/:/home \
+  /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin \
+  ~/bin/cc-connect weixin setup --project nene
+echo ""
+echo "如果上方显示了 token 和 account_id，扫码成功。"
+echo "回到 PC 按回车继续部署。"
+'@
+    $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($scanScript))
+    Invoke-Termux "echo '$b64' | base64 -d > /data/data/com.termux/files/home/scan-wechat.sh && chmod +x /data/data/com.termux/files/home/scan-wechat.sh" | Out-Null
+    Write-OK "快捷脚本已创建"
+
     Write-Host ""
     Write-Host "  -----------------------------------------"
     Write-Host "  现在需要拿起手机操作"
     Write-Host "  -----------------------------------------"
     Write-Host ""
-    Write-Host "  在手机 Termux 中运行以下命令："
+    Write-Host "  在手机 Termux 中运行（可复制粘贴）："
     Write-Host ""
-    Write-Host "    proot -b /data/local/tmp/resolv.conf:/etc/resolv.conf -b ~/proot-fs/etc/ssl:/etc/ssl -b /data/data/com.termux/files/usr:/usr -b ~/:/home /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin ~/bin/cc-connect weixin setup --project nene"
+    Write-Host "    bash ~/scan-wechat.sh"
     Write-Host ""
     Write-Host "  会显示一个二维码链接。"
     Write-Host "  1. 在手机浏览器打开该链接"
