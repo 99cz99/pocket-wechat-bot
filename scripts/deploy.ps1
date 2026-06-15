@@ -50,7 +50,7 @@ $desktopDir = [Environment]::GetFolderPath("Desktop")
 
 # 1) 先检查桌面是否已有（匹配任意版本号的文件名）
 $desktopFile = Get-ChildItem -Path $desktopDir -Filter "cc-connect*" | Where-Object {
-    $_.Name -match "^cc-connect" -and $_.Name -notmatch "\.(md|txt)$"
+    -not $_.PSIsContainer -and $_.Name -match "^cc-connect" -and $_.Name -notmatch "\.(md|txt)$"
 } | Select-Object -First 1
 
 if ($desktopFile) {
