@@ -13,6 +13,9 @@ set -uo pipefail
 # 注意：不用 set -e，因为 grep/pgrep 在"未找到"时返回非零是正常行为
 # 需要显式退出的地方使用 err() 函数
 
+# 确保 Termux 二进制在 PATH 中（run-as 环境不加载 .bashrc）
+export PATH="/data/data/com.termux/files/usr/bin:/data/data/com.termux/files/usr/bin/applets:$PATH"
+
 # ---- 颜色 ----
 RED='\033[0;31m'
 GREEN='\033[0;32m'
