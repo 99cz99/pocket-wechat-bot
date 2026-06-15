@@ -557,7 +557,7 @@ step_wechat() {
 
     if [ "$NONINTERACTIVE" = "1" ]; then
         warn "未获取微信凭据，请稍后在手机 Termux 中手动执行："
-        echo "     ~/bin/cc-connect weixin setup --project nene"
+        echo "     proot -b /data/local/tmp/resolv.conf:/etc/resolv.conf -b ~/proot-fs/etc/ssl:/etc/ssl -b /data/data/com.termux/files/usr:/usr -b ~/:/home /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin ~/bin/cc-connect weixin setup --project nene"
         echo "     扫码后 token 和 account_id 会自动填入 config.toml"
         return
     fi
@@ -573,7 +573,7 @@ step_wechat() {
     echo ""
     info "正在获取微信凭据（请在手机上扫码）..."
     local setup_output
-    setup_output=$("$HOME/bin/cc-connect" weixin setup --project nene 2>&1) || true
+    setup_output=$(proot -b /data/local/tmp/resolv.conf:/etc/resolv.conf -b "$HOME/proot-fs/etc/ssl:/etc/ssl" -b /data/data/com.termux/files/usr:/usr -b "$HOME:/home" /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin "$HOME/bin/cc-connect" weixin setup --project nene 2>&1) || true
     echo "$setup_output"
 
     # 自动解析 token 和 account_id

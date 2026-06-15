@@ -410,7 +410,7 @@ if ($tokenOk) {
     Write-Host ""
     Write-Host "  在手机 Termux 中运行以下命令："
     Write-Host ""
-    Write-Host "    GODEBUG=netdns=go ~/bin/cc-connect weixin setup --project nene"
+    Write-Host "    proot -b /data/local/tmp/resolv.conf:/etc/resolv.conf -b ~/proot-fs/etc/ssl:/etc/ssl -b /data/data/com.termux/files/usr:/usr -b ~/:/home /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin ~/bin/cc-connect weixin setup --project nene"
     Write-Host ""
     Write-Host "  会显示一个二维码链接。"
     Write-Host "  1. 在手机浏览器打开该链接"
@@ -547,7 +547,7 @@ if (Test-Termux "grep -q 'token = `"wx_' /data/data/com.termux/files/home/.cc-co
     Write-OK "微信凭据        已配置"
 } else {
     Write-Fail "微信凭据        未配置"
-    Write-Host "                   ~/bin/cc-connect weixin setup --project nene"
+    Write-Host "                   proot -b /data/local/tmp/resolv.conf:/etc/resolv.conf -b ~/proot-fs/etc/ssl:/etc/ssl -b /data/data/com.termux/files/usr:/usr -b ~/:/home /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin ~/bin/cc-connect weixin setup --project nene"
 }
 
 # OpenID
