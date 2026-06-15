@@ -1,4 +1,4 @@
-# update.ps1 — 快速更新手机上的项目文件并重启 bot
+﻿# update.ps1 — 快速更新手机上的项目文件并重启 bot
 # 用法: 右键 -> 使用 PowerShell 运行，或 deploy.bat 完成后日常使用
 
 $ErrorActionPreference = "Continue"
