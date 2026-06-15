@@ -46,6 +46,8 @@ cd pocket-wechat-bot && bash scripts/setup-phone.sh
 
 脚本自动完成：依赖安装 → 配置生成 → 文件部署 → 启动运行。只需在扫码时拿出微信扫一下。支持中断续跑（幂等）。
 
+**日常更新**：改了代码或人格文件后，双击 `scripts\update.bat`，30 秒完成推文件+重启 bot（版本检测，无变更自动跳过）。
+
 > 详细说明见下方手动步骤，或 [部署教程](docs/deploy-guide.html)。
 
 ### 无脑部署 🤖（让 AI 帮你）
