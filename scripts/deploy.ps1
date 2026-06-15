@@ -130,6 +130,16 @@ if ($LASTEXITCODE -ne 0) {
     Pause; exit 1
 }
 Write-Host "[*] cc-connect 已推送到手机"
+
+# run-as 无法访问 /sdcard/，需要额外复制到 Termux 私有目录
+Write-Host "[*] 正在复制 cc-connect 到 Termux..."
+adb shell "cat /sdcard/Download/cc-connect-linux-arm64 | run-as com.termux sh -c 'cat > /data/data/com.termux/files/home/cc-connect-linux-arm64 && chmod +x /data/data/com.termux/files/home/cc-connect-linux-arm64'" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[!] 复制到 Termux 失败，请检查 Termux 是否正常运行"
+    Pause; exit 1
+}
+Write-Host "[*] cc-connect 已复制到 Termux"
+
 # 桌面文件保留（用户自己放的），临时文件清理
 if ($ccBin -ne $desktopFile) {
     Remove-Item $ccBin -ErrorAction SilentlyContinue

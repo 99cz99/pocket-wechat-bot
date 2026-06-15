@@ -129,7 +129,7 @@ cleanup_duplicates() {
     local skills_dirs
     skills_dirs=$(find "$HOME" -maxdepth 3 -path "*/skills/nene" -type d 2>/dev/null | grep -v "pocket-wechat-bot")
     local skills_count
-    skills_count=$(echo "$skills_dirs" | grep -c nene 2>/dev/null || echo 0)
+    skills_count=$(echo "$skills_dirs" | grep -c nene 2>/dev/null || true)
     if [ "$skills_count" -gt 1 ]; then
         warn "发现多个 skills/nene/ 目录（应有 2 个：repo 源 + 运行时）："
         echo "$skills_dirs" | while read -r d; do
@@ -224,12 +224,22 @@ step_cc_connect() {
         info "现有 cc-connect 无法执行，重新下载..."
     fi
 
-    # 优先从 PC 推送的路径加载（deploy.ps1 会预先推送到 /sdcard/Download/）
-    local pc_pushed="/sdcard/Download/cc-connect-linux-arm64"
-    if [ -f "$pc_pushed" ]; then
-        info "检测到 PC 已推送 cc-connect，直接安装..."
-        cp "$pc_pushed" "$HOME/bin/cc-connect"
+    # 优先从 PC 推送的路径加载
+    # deploy.ps1 会通过 run-as 将二进制复制到 $HOME/（/sdcard/ 在 run-as 下不可访问）
+    local pc_pushed_home="$HOME/cc-connect-linux-arm64"
+    local pc_pushed_sdcard="/sdcard/Download/cc-connect-linux-arm64"
+    local pushed=""
+    if [ -f "$pc_pushed_home" ]; then
+        pushed="$pc_pushed_home"
+        info "检测到 PC 已推送 cc-connect（HOME），直接安装..."
+    elif [ -f "$pc_pushed_sdcard" ]; then
+        pushed="$pc_pushed_sdcard"
+        info "检测到 PC 已推送 cc-connect（SD），直接安装..."
+    fi
+    if [ -n "$pushed" ]; then
+        cp "$pushed" "$HOME/bin/cc-connect"
         chmod +x "$HOME/bin/cc-connect"
+		rm -f "$pc_pushed_home"  # 安装后清理临时文件
     elif [ "$NONINTERACTIVE" != "1" ]; then
         # 交互模式：手机直接下载（需要能访问 GitHub）
         info "从 GitHub Releases 下载..."
