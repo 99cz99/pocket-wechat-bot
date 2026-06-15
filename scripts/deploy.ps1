@@ -412,11 +412,15 @@ if ($remaining -eq "0") {
 # ============================================================
 Write-Step 6 "微信扫码获取凭据"
 
-$tokenOk = Test-Termux "grep -q 'token = `"wx_' /data/data/com.termux/files/home/.cc-connect/config.toml"
+$tokenOk = -not (Test-Termux "grep -q '<YOUR_BOT_TOKEN>' /data/data/com.termux/files/home/.cc-connect/config.toml")
 
 if ($tokenOk) {
-    $token = Invoke-Termux "grep 'token = ' /data/data/com.termux/files/home/.cc-connect/config.toml | head -1 | sed 's/.*= `"//;s/`"//'"
-    Write-OK "微信凭据已配置: $($token.Trim())"
+    $token = Invoke-Termux "grep 'token = ' /data/data/com.termux/files/home/.cc-connect/config.toml | grep -v '<YOUR_' | head -1 | sed 's/.*= `"//;s/`"//'"
+    if ($token) { $token = $token.Trim() }
+    $acct = Invoke-Termux "grep 'account_id = ' /data/data/com.termux/files/home/.cc-connect/config.toml | grep -v '<YOUR_' | head -1 | sed 's/.*= `"//;s/`"//'"
+    if ($acct) { $acct = $acct.Trim() }
+    Write-OK "微信凭据已配置: $token"
+    if ($acct) { Write-OK "Bot 账号: $acct" }
 } else {
     Write-Warn "微信凭据未配置"
 
@@ -485,16 +489,19 @@ echo "回到 PC 按回车继续部署。"
     do {
         Read-Host "  扫码完成后，按回车继续"
 
-        $tokenCheck = Invoke-Termux "grep -o 'wx_[a-zA-Z0-9_-]*' /data/data/com.termux/files/home/.cc-connect/config.toml 2>/dev/null | head -1"
-        if ($tokenCheck) { $tokenCheck = $tokenCheck.Trim() }
-
-        if ($tokenCheck -and $tokenCheck -ne '<YOUR_BOT_TOKEN>') {
-            Write-OK "检测到 token: $tokenCheck"
+        # cc-connect weixin setup 会直接把凭据写入 config.toml
+        # 检查占位符是否已被替换
+        $stillPlaceholder = Test-Termux "grep -q '<YOUR_BOT_TOKEN>' /data/data/com.termux/files/home/.cc-connect/config.toml"
+        if (-not $stillPlaceholder) {
+            $token = Invoke-Termux "grep 'token = ' /data/data/com.termux/files/home/.cc-connect/config.toml | grep -v '<YOUR_' | head -1 | sed 's/.*= `\"//;s/`\"//'"
+            if ($token) { $token = $token.Trim() }
+            Write-OK "检测到 token: $token"
             $tokenOk = $true
             break
         }
 
-        $scanToken = Invoke-Termux "cat /data/data/com.termux/files/home/cc-connect/cc-connect.log 2>/dev/null | grep -o 'wx_[a-zA-Z0-9_-]*' | head -1"
+        # 备用：尝试从 cc-connect 日志提取
+        $scanToken = Invoke-Termux "cat /data/data/com.termux/files/home/cc-connect/cc-connect.log 2>/dev/null | grep -oE '[a-f0-9]+@im\.bot:[a-f0-9]+' | head -1"
         if ($scanToken) { $scanToken = $scanToken.Trim() }
         if ($scanToken) {
             $sedCmd = "sed -i 's#<YOUR_BOT_TOKEN>#$scanToken#g' /data/data/com.termux/files/home/.cc-connect/config.toml"
@@ -506,9 +513,9 @@ echo "回到 PC 按回车继续部署。"
 
         Write-Warn "尚未检测到 token"
         Write-Host "  请确认："
-        Write-Host "    1. 已在 Termux 中运行了扫码命令"
-        Write-Host "    2. 已用微信扫描了二维码"
-        Write-Host "    3. 终端显示了 'token:' 和 'account_id:'"
+        Write-Host "    1. 已在 Termux 中运行 bash ~/scan-wechat.sh"
+        Write-Host "    2. 终端显示了 '已与微信建立连接'"
+        Write-Host "    3. 已用微信扫描了二维码"
         Write-Host ""
 
         $retry = Read-Host "  重试？按回车重试，输入 s 跳过 [s]"
@@ -608,11 +615,11 @@ if ($remVal -eq "0") {
 }
 
 # 微信凭据
-if (Test-Termux "grep -q 'token = `"wx_' /data/data/com.termux/files/home/.cc-connect/config.toml") {
+if (-not (Test-Termux "grep -q '<YOUR_BOT_TOKEN>' /data/data/com.termux/files/home/.cc-connect/config.toml")) {
     Write-OK "微信凭据        已配置"
 } else {
     Write-Fail "微信凭据        未配置"
-    Write-Host "                   proot -b /data/local/tmp/resolv.conf:/etc/resolv.conf -b ~/proot-fs/etc/ssl:/etc/ssl -b /data/data/com.termux/files/usr:/usr -b ~/:/home /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin ~/bin/cc-connect weixin setup --project nene"
+    Write-Host "                   手机 Termux 运行: bash ~/scan-wechat.sh"
 }
 
 # OpenID
