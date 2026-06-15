@@ -42,6 +42,27 @@ if ($termux -notmatch "com.termux") {
 }
 Write-Host "[*] Termux 已安装"
 
+# ----- 下载 cc-connect（PC 端下载，手机不一定能连 GitHub）-----
+Write-Host "[*] 正在下载 cc-connect（PC 端下载）..."
+$ccBin = "$env:TEMP\cc-connect-linux-arm64"
+$ccUrl = "https://github.com/chenhg5/cc-connect/releases/latest/download/cc-connect-linux-arm64"
+try {
+    Invoke-WebRequest -Uri $ccUrl -OutFile $ccBin -TimeoutSec 60 -ErrorAction Stop
+    Write-Host "[*] cc-connect 下载完成"
+} catch {
+    Write-Host "[!] 下载 cc-connect 失败: $_"
+    Write-Host "    请确认 PC 可以访问 GitHub"
+    Pause; exit 1
+}
+Write-Host "[*] 正在推送 cc-connect 到手机..."
+adb push $ccBin /sdcard/Download/cc-connect-linux-arm64 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[!] 推送失败"
+    Pause; exit 1
+}
+Write-Host "[*] cc-connect 已推送到手机"
+Remove-Item $ccBin -ErrorAction SilentlyContinue
+
 # ----- 打包项目 -----
 Write-Host "[*] 正在打包项目文件..."
 Push-Location $Repo
