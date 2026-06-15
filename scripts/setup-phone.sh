@@ -440,9 +440,13 @@ step_config() {
     local bridge_token=""
 
     if [ "$NONINTERACTIVE" = "1" ]; then
-        info "非交互模式：使用环境变量 DEPLOY_API_KEY 和 DEPLOY_OPENID"
+        # 非交互模式：优先使用环境变量，其次从 bashrc 中提取已有的 key
         if [ -z "$api_key" ]; then
-            warn "未设置 DEPLOY_API_KEY，config.toml 需要手动编辑"
+            api_key=$(grep "ANTHROPIC_API_KEY" "$HOME/.bashrc" 2>/dev/null | tail -1 | sed 's/.*=//' | tr -d '"' | tr -d "'")
+            [ -n "$api_key" ] && info "从 ~/.bashrc 提取到 API Key"
+        fi
+        if [ -z "$api_key" ]; then
+            warn "未提供 API Key，config.toml 将保留占位符（部署后手动编辑即可）"
         fi
         mgmt_token=$(openssl rand -hex 16 2>/dev/null || echo "change-me-$(date +%s)")
         bridge_token=$(openssl rand -hex 16 2>/dev/null || echo "change-me-$(date +%s)")
@@ -501,22 +505,33 @@ step_apikey() {
         existing_key=$(grep "api_key" "$cfg" | head -1 | sed 's/.*= "//;s/"//' | tr -d ' ')
     fi
 
-    # 检查是否已在 bashrc 中
-    if grep -q "ANTHROPIC_API_KEY" "$HOME/.bashrc" 2>/dev/null; then
+    # 检查是否已在 bashrc 中且非空
+    if grep -q "ANTHROPIC_API_KEY=sk-" "$HOME/.bashrc" 2>/dev/null; then
         ok "ANTHROPIC_API_KEY 已在 ~/.bashrc 中"
+        # 同步更新包装器
+        local wrapper="$TERMUX_USR/bin/claude"
+        local existing_val
+        existing_val=$(grep "ANTHROPIC_API_KEY" "$HOME/.bashrc" | tail -1 | sed 's/.*=//')
+        cat > "$wrapper" << WRAPPER_EOF
+#!/data/data/com.termux/files/usr/bin/sh
+export ANTHROPIC_API_KEY="$existing_val"
+exec /usr/bin/node /home/bin/claude-fast.js "\$@"
+WRAPPER_EOF
+        chmod +x "$wrapper"
         mark_done "api_key_bashrc"
         return
     fi
 
     local key="${DEPLOY_API_KEY:-}"
+    # 非交互模式：也尝试从 config.toml 提取已填写的 key
+    if [ -z "$key" ] && [ -n "$existing_key" ] && [ "$existing_key" != "<YOUR_DEEPSEEK_API_KEY>" ]; then
+        key="$existing_key"
+        info "从 config.toml 提取到 API Key"
+    fi
+    # 交互模式：提示输入
     if [ -z "$key" ] && [ "$NONINTERACTIVE" != "1" ]; then
-        if [ -n "$existing_key" ] && [ "$existing_key" != "<YOUR_DEEPSEEK_API_KEY>" ]; then
-            info "检测到 config.toml 中已有 API Key，使用该值"
-            key="$existing_key"
-        else
-            echo -ne "  DeepSeek API Key（sk-...）："
-            read -r key
-        fi
+        echo -ne "  DeepSeek API Key（sk-...）："
+        read -r key
     fi
 
     if [ -n "$key" ]; then
@@ -533,13 +548,13 @@ exec /usr/bin/node /home/bin/claude-fast.js "\$@"
 WRAPPER_EOF
         chmod +x "$wrapper"
         ok "包装器已注入 API Key: $wrapper"
+        mark_done "api_key_bashrc"
     else
-        info "跳过（未提供 API Key），请手动添加："
+        warn "未提供 API Key，请稍后手动设置："
         echo '      echo "export ANTHROPIC_API_KEY=sk-你的key" >> ~/.bashrc'
         echo '      source ~/.bashrc'
+        # 不标记完成——下次重跑会再次尝试
     fi
-
-    mark_done "api_key_bashrc"
 }
 
 # ============================================================
@@ -791,6 +806,94 @@ step_verify() {
 }
 
 # ============================================================
+# 动态待办清单（部署完成后检查缺什么，打印精确修复命令）
+# ============================================================
+print_todo() {
+    local cfg="$HOME/.cc-connect/config.toml"
+    local claude_md="$HOME/cc-connect/CLAUDE.md"
+    local bashrc="$HOME/.bashrc"
+    local todo=0
+
+    echo "╔══════════════════════════════════════════════╗"
+    echo "║  部署后检查                                 ║"
+    echo "╚══════════════════════════════════════════════╝"
+    echo ""
+
+    # 1. API Key
+    if grep -q "ANTHROPIC_API_KEY=sk-" "$bashrc" 2>/dev/null; then
+        ok "API Key          已设置"
+    else
+        warn "API Key          未设置"
+        echo "   修复: echo 'export ANTHROPIC_API_KEY=sk-你的key' >> ~/.bashrc && source ~/.bashrc"
+        todo=$((todo + 1))
+    fi
+
+    # 2. config.toml 占位符
+    if [ -f "$cfg" ]; then
+        local remaining
+        remaining=$(grep -c "<YOUR_" "$cfg" 2>/dev/null || true)
+        if [ "${remaining:-0}" -gt 0 ]; then
+            warn "config.toml      还有 $remaining 个占位符"
+            grep "<YOUR_" "$cfg" | sed 's/^/      /'
+            echo "   修复: nano ~/.cc-connect/config.toml"
+            todo=$((todo + 1))
+        else
+            ok "config.toml      已填写完整"
+        fi
+    else
+        warn "config.toml      不存在"
+        echo "   修复: cp ~/pocket-wechat-bot/config/config.toml.template ~/.cc-connect/config.toml && nano ~/.cc-connect/config.toml"
+        todo=$((todo + 1))
+    fi
+
+    # 3. CLAUDE.md OpenID
+    if [ -f "$claude_md" ]; then
+        if grep -q "<YOUR_WECHAT_OPENID>" "$claude_md" 2>/dev/null; then
+            warn "CLAUDE.md        OpenID 占位符未替换"
+            echo "   修复: 微信给 bot 发一条消息，然后运行："
+            echo "         bash ~/pocket-wechat-bot/scripts/fix-openid.sh"
+            todo=$((todo + 1))
+        else
+            ok "CLAUDE.md        OpenID 已配置"
+        fi
+    fi
+
+    # 4. 微信凭据（token + account_id）
+    if [ -f "$cfg" ]; then
+        local token account_id
+        token=$(grep 'token = ' "$cfg" | head -1 | sed 's/.*= "//;s/"//' | tr -d ' ')
+        account_id=$(grep 'account_id = ' "$cfg" | head -1 | sed 's/.*= "//;s/"//' | tr -d ' ')
+        if [ -z "$token" ] || [ "$token" = "<YOUR_BOT_TOKEN>" ] || [ -z "$account_id" ] || [ "$account_id" = "<YOUR_BOT_ACCOUNT_ID>" ]; then
+            warn "微信凭据         未配置"
+            echo "   修复: ~/bin/cc-connect weixin setup --project nene"
+            echo "         扫码后把 token 和 account_id 填入 ~/.cc-connect/config.toml"
+            todo=$((todo + 1))
+        else
+            ok "微信凭据         已配置"
+        fi
+    fi
+
+    echo ""
+    if [ "$todo" -eq 0 ]; then
+        ok "全部检查通过！无需额外操作。"
+        echo ""
+    else
+        echo "  以上 $todo 项需手动完成，完成后重跑 deploy.bat 即可自动启动"
+        echo "  （已完成的步骤会自动跳过）"
+        echo ""
+    fi
+
+    # 总是显示常用操作
+    echo "  ─── 常用操作 ───"
+    echo "  查看日志:  cat ~/cc-connect/cc-connect.log"
+    echo "  前台运行:  bash ~/start-nene.sh"
+    echo "  重启 bot:  pkill -f cc-connect && bash ~/start-nene.sh"
+    echo "  管理面板:  http://127.0.0.1:9820"
+    echo "  更新项目:  cd ~/pocket-wechat-bot && git pull && cp claude-fast.js ~/bin/"
+    echo ""
+}
+
+# ============================================================
 # 主流程
 # ============================================================
 main() {
@@ -831,20 +934,9 @@ main() {
     step_launch
     step_verify
 
+    # -------- 动态待办清单 --------
     echo ""
-    echo "  后续操作："
-    echo "  ─────────"
-    echo "  第1步: 微信给 bot 发一条消息（任意内容）"
-    echo "         然后: bash ~/pocket-wechat-bot/scripts/fix-openid.sh"
-    echo "         脚本会自动从日志提取 OpenID 并填入 CLAUDE.md"
-    echo ""
-    echo "  查看状态:  bash ~/start-nene.sh（前台运行）"
-    echo "  重新连接:  tmux attach -t nene"
-    echo "  查看日志:  cat ~/cc-connect/cc-connect.log"
-    echo "  重启 bot:  pkill -f cc-connect && bash ~/start-nene.sh"
-    echo "  管理面板:  http://127.0.0.1:9820"
-    echo "  更新项目:  cd ~/pocket-wechat-bot && git pull"
-    echo ""
+    print_todo
 }
 
 main "$@"
