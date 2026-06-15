@@ -255,7 +255,7 @@ try {
   process.stderr.write('claude-fast: loaded CLAUDE.md (' + (Buffer.byteLength(systemPrompt)/1024).toFixed(1) + 'KB)\n');
 
   // 注入会话记忆：让重启后的bot知道上次聊了什么
-  const affPath = path.join(HOME, '.claude/skills/nene/references/affinity.json');
+  const affPath = path.join(WORK_DIR, 'references/affinity.json');
 
   // 运行时检查：CLAUDE.md 是否仍含未替换的占位符
   if (systemPrompt.includes('<YOUR_WECHAT_OPENID>')) {
@@ -279,7 +279,7 @@ try {
       systemPrompt += mem;
       systemPrompt += [
         '<!-- SESSION_MEMORY_UPDATE_RULE -->',
-        '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `.claude/skills/nene/references/affinity.json`。',
+        '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `cc-connect/references/affinity.json`。',
         '需要更新的字段：',
         '- `last_session`: 改为今天的日期（格式 YYYY-MM-DD，如 "2026-06-13"）',
         '- `notes`: 用一两句话记录本轮对话中最值得记住的内容。如果对话很短或只是闲聊，写一句简短概括即可，不要留空。',
@@ -357,7 +357,7 @@ const TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          file_path: { type: 'string', description: '文件路径，相对于 HOME 目录（如 cc-connect/CLAUDE.md 或 .claude/skills/nene/references/affinity.json）' },
+          file_path: { type: 'string', description: '文件路径，相对于 HOME 目录（如 cc-connect/CLAUDE.md 或 cc-connect/references/affinity.json）' },
           content: { type: 'string', description: '要写入的内容' }
         },
         required: ['file_path', 'content']
@@ -487,7 +487,7 @@ function executeTool(name, args) {
 
 // ====== 自动更新 affinity ======
 function updateAffinityAuto() {
-  const affPath = path.join(HOME, '.claude/skills/nene/references/affinity.json');
+  const affPath = path.join(WORK_DIR, 'references/affinity.json');
   try {
     let aff = { trust_level: 0, trust_value: 0, last_session: '', notes: '' };
     if (fs.existsSync(affPath)) {
@@ -766,11 +766,11 @@ cat /data/data/com.termux/files/usr/bin/claude
 
 ```bash
 # 创建目录
-mkdir -p ~/cc-connect ~/.claude/skills
+mkdir -p ~/cc-connect ~/.cc-connect ~/skills
 
 # 从仓库复制完整人设文件
 cp CLAUDE.md ~/cc-connect/CLAUDE.md
-cp -r skills/nene ~/.claude/skills/
+cp -r skills/nene ~/skills/
 
 # 编辑 CLAUDE.md，替换 <YOUR_WECHAT_OPENID> 为你的微信 OpenID
 # OpenID 可通过微信里给 bot 发 /whoami 获取
@@ -783,7 +783,7 @@ ls -la ~/cc-connect/CLAUDE.md
 wc -l ~/cc-connect/CLAUDE.md
 # 确认有内容（完整版应显示 700+ 行）
 
-ls ~/.claude/skills/nene/SKILL.md
+ls ~/skills/nene/SKILL.md
 # 确认人格文件已复制
 ```
 
@@ -793,7 +793,7 @@ ls ~/.claude/skills/nene/SKILL.md
 > - `termux-bashrc` — Termux 的 .bashrc 模板，含 `cc-connect` 快捷 alias（自动处理 DNS/SSL）
 > - `termux-resolv.conf` — DNS 配置模板，在 `start-bot.sh` 未自动生成时手动使用
 >
-> 💡 仓库里还有一个 `config/affinity.json.template` 文件——这是信任度数据的初始模板。**不需要手动复制**，`claude-fast.js` 会在首次运行时自动创建 `~/.claude/skills/nene/references/affinity.json`。
+> 💡 仓库里还有一个 `config/affinity.json.template` 文件——这是信任度数据的初始模板。**不需要手动复制**，`claude-fast.js` 会在首次运行时自动创建 `~/cc-connect/references/affinity.json`。
 
 ## 11. 创建启动脚本
 
@@ -1043,9 +1043,11 @@ scripts\push-config.bat
 ├── /data/local/tmp/
 │   └── resolv.conf          ← DNS 配置（start-bot.sh 自动管理）
 ├── start-nene.sh            ← 启动脚本
-├── .claude/
-│   └── skills/
-│       └── nene/            ← 人格数据（SKILL.md + affinity.json + 调研资料）
+├── skills/
+│   └── nene/                ← 人格数据（SKILL.md + 调研资料）
+├── cc-connect/
+│   └── references/
+│       └── affinity.json    ← 信任值跟踪（运行时数据）
 └── .cc-connect/
     └── config.toml          ← 配置文件
 

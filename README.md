@@ -102,7 +102,7 @@ cp -r /data/data/com.termux/files/usr/etc/tls/* ~/proot-fs/etc/ssl/
 
 ```bash
 # 创建工作目录
-mkdir -p ~/cc-connect ~/.cc-connect ~/.claude/skills
+mkdir -p ~/cc-connect ~/.cc-connect ~/skills
 
 # 配置文件
 cp ~/pocket-wechat-bot/config/config.toml.template ~/.cc-connect/config.toml
@@ -133,7 +133,7 @@ source ~/.bashrc
 
 ```bash
 # 人格文件和系统提示词
-cp -r ~/pocket-wechat-bot/skills/nene ~/.claude/skills/
+cp -r ~/pocket-wechat-bot/skills/nene ~/skills/
 cp ~/pocket-wechat-bot/CLAUDE.md ~/cc-connect/CLAUDE.md
 
 # ⚠️ 必须编辑！替换 <YOUR_WECHAT_OPENID> 为你的微信 OpenID（通过 /whoami 获取）

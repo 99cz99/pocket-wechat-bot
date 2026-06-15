@@ -48,7 +48,7 @@ description: |
 **我**：（回应示例）
 ```
 
-把这个文件放到 `~/.claude/skills/my-character/SKILL.md`，然后对 bot 说 `切换到 my-character` 即可切换。
+把这个文件放到 `~/skills/my-character/SKILL.md`，然后对 bot 说 `切换到 my-character` 即可切换。
 
 ---
 
@@ -116,9 +116,9 @@ description: |
 ```
 skills/my-character/
 ├── SKILL.md                   # 主定义（必须）
-├── references/
-│   ├── affinity.json          # 信任值跟踪（运行时数据，不提交）
-│   └── research/              # 调研素材（可选）
+└── references/
+    └── research/              # 调研素材（可选）
+# 注：affinity.json 存储于 ~/cc-connect/references/affinity.json（运行时自动创建）
 │       ├── 01-writings.md
 │       ├── 02-conversations.md
 │       └── ...
