@@ -2,7 +2,8 @@
 # 用法: 右键 -> 使用 PowerShell 运行
 # 需要: adb + USB 连接 + 手机已装 Termux
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
+$LastExitOk = $true
 $Repo = Split-Path -Parent $PSScriptRoot
 $Tgz = "$env:TEMP\pwb-deploy.tar"
 
@@ -123,13 +124,12 @@ if (-not $ccBin) {
 }
 
 Write-Host "[*] 正在推送 cc-connect 到手机..."
-$pushResult = adb push $ccBin /sdcard/Download/cc-connect-linux-arm64 2>&1 | Out-String
-if ($LASTEXITCODE -ne 0 -or $pushResult -notmatch "pushed") {
-    Write-Host "[!] 推送失败: $pushResult"
-    Write-Host "    请检查 USB 连接和手机存储空间"
+adb push $ccBin /sdcard/Download/cc-connect-linux-arm64 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[!] 推送失败，请检查 USB 连接和手机存储空间"
     Pause; exit 1
 }
-Write-Host "[*] cc-connect 已推送到手机 ($($pushResult.Trim()))"
+Write-Host "[*] cc-connect 已推送到手机"
 # 桌面文件保留（用户自己放的），临时文件清理
 if ($ccBin -ne $desktopFile) {
     Remove-Item $ccBin -ErrorAction SilentlyContinue
