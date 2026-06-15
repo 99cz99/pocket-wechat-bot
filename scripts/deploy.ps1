@@ -384,10 +384,10 @@ if ($remaining -eq "0") {
 # ============================================================
 Write-Step 6 "微信扫码获取凭据"
 
-$tokenOk = Test-Termux "grep -q 'token = \"wx_' /data/data/com.termux/files/home/.cc-connect/config.toml"
+$tokenOk = Test-Termux "grep -q 'token = `"wx_' /data/data/com.termux/files/home/.cc-connect/config.toml"
 
 if ($tokenOk) {
-    $token = Invoke-Termux "grep 'token = ' /data/data/com.termux/files/home/.cc-connect/config.toml | head -1 | sed 's/.*= \"//;s/\"//'"
+    $token = Invoke-Termux "grep 'token = ' /data/data/com.termux/files/home/.cc-connect/config.toml | head -1 | sed 's/.*= `"//;s/`"//'"
     Write-OK "微信凭据已配置: $($token.Trim())"
 } else {
     Write-Warn "微信凭据未配置"
@@ -422,7 +422,7 @@ if ($tokenOk) {
         $scanToken = Invoke-Termux "cat /data/data/com.termux/files/home/cc-connect/cc-connect.log 2>/dev/null | grep -o 'wx_[a-zA-Z0-9_-]*' | head -1"
         $scanToken = $scanToken.Trim()
         if ($scanToken) {
-            $sedCmd = "sed -i 's|<YOUR_BOT_TOKEN>|$scanToken|g' /data/data/com.termux/files/home/.cc-connect/config.toml"
+            $sedCmd = "sed -i 's#<YOUR_BOT_TOKEN>#$scanToken#g' /data/data/com.termux/files/home/.cc-connect/config.toml"
             Invoke-Termux $sedCmd | Out-Null
             Write-OK "已从日志提取 token: $scanToken"
             $tokenOk = $true
@@ -532,7 +532,7 @@ if ($rem.Trim() -eq "0") {
 }
 
 # 微信凭据
-if (Test-Termux "grep -q 'token = \"wx_' /data/data/com.termux/files/home/.cc-connect/config.toml") {
+if (Test-Termux "grep -q 'token = `"wx_' /data/data/com.termux/files/home/.cc-connect/config.toml") {
     Write-OK "微信凭据        已配置"
 } else {
     Write-Fail "微信凭据        未配置"
