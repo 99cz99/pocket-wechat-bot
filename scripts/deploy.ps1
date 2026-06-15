@@ -55,15 +55,39 @@ if (Test-Path $desktopFile) {
     $magic = [System.IO.File]::ReadAllBytes($desktopFile)[0..3]
     if ($magic[0] -eq 0x7f -and $magic[1] -eq 0x45) {
         $ccBin = $desktopFile
-    } elseif ($desktopFile -match "\.(gz|zip|tar)$") {
-        Write-Host "[!] 你下载的是 Source code 压缩包，不是二进制文件"
-        Write-Host "    GitHub Release 页面往下滑，在 Assets 里找:"
-        Write-Host "    cc-connect-linux-arm64 （约 20MB，无后缀）"
-        Write-Host "    下载后放到桌面，重试"
-        Pause; exit 1
+    } elseif ($desktopFile -match "\.(tar|gz|tgz|zip)$") {
+        # tar/压缩包 → 解压提取二进制
+        Write-Host "[*] 检测到压缩包，正在解压..."
+        $extractDir = "$env:TEMP\cc-extract"
+        Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
+        try {
+            tar -xf $desktopFile -C $extractDir 2>$null
+            if ($LASTEXITCODE -ne 0) { throw "tar failed" }
+        } catch {
+            Write-Host "[!] 解压失败，请手动解压该文件，将里面的二进制放到桌面"
+            Write-Host "    二进制文件名类似: cc-connect 或 cc-connect-linux-arm64"
+            Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
+            Pause; exit 1
+        }
+        # 在解压目录中找 ELF 二进制
+        $found = Get-ChildItem -Path $extractDir -Recurse -File | Where-Object {
+            $m = [System.IO.File]::ReadAllBytes($_.FullName)[0..3]
+            $m[0] -eq 0x7f -and $m[1] -eq 0x45
+        } | Select-Object -First 1
+        if ($found) {
+            $ccBin = $found.FullName
+            Write-Host "[*] 已提取: $($found.Name)"
+        } else {
+            Write-Host "[!] 压缩包内未找到 ELF 二进制"
+            Write-Host "    请确认下载的是 Assets 中的 cc-connect-linux-arm64.tar"
+            Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
+            Pause; exit 1
+        }
     } else {
-        Write-Host "[!] 桌面文件无法识别为 cc-connect 二进制"
-        Write-Host "    请确认: 从 GitHub Assets 下载 cc-connect-linux-arm64"
+        Write-Host "[!] 桌面文件无法识别（既非二进制也非压缩包）"
+        Write-Host "    请从 GitHub Assets 下载: cc-connect-linux-arm64"
+        Write-Host "    https://github.com/chenhg5/cc-connect/releases/latest"
         Pause; exit 1
     }
 }
