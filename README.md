@@ -174,7 +174,7 @@ bash ~/start-nene.sh
 |------|------|------|
 | **宁宁（nene）** | `skills/nene/` | 绫地宁宁，出自柚子社《魔女的夜宴》。7 个核心人格模型、完整表达 DNA、六层信任阶梯 |
 
-**角色介绍页**：[docs/nene-skill-intro.html](docs/nene-skill-intro.html)
+**角色介绍页**：[在线预览](https://99cz99.github.io/pocket-wechat-bot/nene-skill-intro.html) · [本地](docs/nene-skill-intro.html)
 
 ### 创作你自己的角色
 
