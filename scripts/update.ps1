@@ -92,9 +92,12 @@ if ($phoneHash -eq $currentHash) {
 
 # 3. 同步运行时代码
 Write-Host "[..] 同步运行时代码..." -ForegroundColor Cyan
-# claude-fast.js：bot 实际执行的包装器，必须同步到 ~/bin/
+# claude-fast.js：bot 实际执行的 API 包装器，必须同步到 ~/bin/
 Invoke-Termux "cp $PhoneRepo/claude-fast.js /data/data/com.termux/files/home/bin/claude-fast.js" | Out-Null
 Write-Host "[OK] claude-fast.js 已同步" -ForegroundColor Green
+# start-bot.sh：启动脚本，同步到 ~/start-nene.sh
+Invoke-Termux "cp $PhoneRepo/scripts/start-bot.sh /data/data/com.termux/files/home/start-nene.sh && chmod +x /data/data/com.termux/files/home/start-nene.sh" | Out-Null
+Write-Host "[OK] start-nene.sh 已同步" -ForegroundColor Green
 # CLAUDE.md 和 skills：bot 读取的人格文件
 Invoke-Termux "cp $PhoneRepo/CLAUDE.md /data/data/com.termux/files/home/cc-connect/CLAUDE.md" | Out-Null
 if (Test-Termux "test -d $PhoneRepo/skills/nene") {
