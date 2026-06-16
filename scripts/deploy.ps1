@@ -227,6 +227,7 @@ if (-not $ccBin) {
 Write-Info "清理 /sdcard/Download/ 旧文件..."
 adb shell rm -rf /sdcard/Download/pocket-wechat-bot /sdcard/Download/cc-connect-linux-arm64 2>$null
 adb shell rm -f /sdcard/Download/claude-fast*.js /sdcard/Download/CLAUDE.md /sdcard/Download/claude-wrapper* /sdcard/Download/fix-claude.sh 2>$null
+adb shell rm -f /sdcard/Download/cw-fixed.sh /sdcard/Download/fix-openid.sh /sdcard/Download/start-nene-*.sh 2>$null
 
 # --- 2.2 推送 cc-connect 到手机 ---
 Write-Info "推送 cc-connect 到手机..."
