@@ -306,9 +306,13 @@ step_proot() {
 step_claude_fast() {
     section "Step 4: 部署 claude-fast.js"
 
-    if step_done "claude_fast_js"; then
+    if step_done "claude_fast_js" && [ -f "$HOME/bin/claude-fast.js" ]; then
         skip "claude-fast.js 已部署"
         return
+    fi
+    if step_done "claude_fast_js"; then
+        warn "状态文件记录已部署，但 claude-fast.js 缺失，重新部署..."
+        sed -i '/claude_fast_js/d' "$STATE_FILE" 2>/dev/null || true
     fi
 
     local src="$REPO_DIR/claude-fast.js"
@@ -337,9 +341,13 @@ step_claude_fast() {
 step_claude_wrapper() {
     section "Step 5: 创建 /usr/bin/claude 包装器"
 
-    if step_done "claude_wrapper"; then
+    if step_done "claude_wrapper" && [ -x "$TERMUX_USR/bin/claude" ]; then
         skip "claude 包装器已创建"
         return
+    fi
+    if step_done "claude_wrapper"; then
+        warn "状态文件记录已部署，但 claude 包装器缺失，重新创建..."
+        sed -i '/claude_wrapper/d' "$STATE_FILE" 2>/dev/null || true
     fi
 
     local wrapper="$TERMUX_USR/bin/claude"
@@ -367,9 +375,13 @@ WRAPPER_EOF
 step_personality() {
     section "Step 6: 部署人格文件"
 
-    if step_done "personality_files"; then
+    if step_done "personality_files" && [ -f "$HOME/cc-connect/CLAUDE.md" ] && [ -d "$HOME/skills/nene" ]; then
         skip "人格文件已部署"
         return
+    fi
+    if step_done "personality_files"; then
+        warn "状态文件记录已部署，但人格文件缺失，重新部署..."
+        sed -i '/personality_files/d' "$STATE_FILE" 2>/dev/null || true
     fi
 
     # 工作目录
@@ -648,9 +660,13 @@ step_wechat() {
 step_startup() {
     section "Step 10: 部署启动脚本"
 
-    if step_done "start_script"; then
+    if step_done "start_script" && [ -f "$HOME/start-nene.sh" ]; then
         skip "启动脚本已部署"
         return
+    fi
+    if step_done "start_script"; then
+        warn "状态文件记录已部署，但 start-nene.sh 缺失，重新部署..."
+        sed -i '/start_script/d' "$STATE_FILE" 2>/dev/null || true
     fi
 
     if [ -f "$REPO_DIR/scripts/start-bot.sh" ]; then
