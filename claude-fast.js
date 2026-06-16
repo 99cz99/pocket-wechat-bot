@@ -457,15 +457,28 @@ function trimHistory() {
   const preserveFirst = conversation[0]; // system prompt
   const others = conversation.slice(1);
   if (others.length > 36) {
-    const trimmed = others.slice(others.length - 36);
-    // 向后扫描：如果第一条是 tool 消息，向前找到对应的 assistant(tool_calls) 消息
-    while (trimmed.length > 0 && trimmed[0].role === 'tool') {
-      // 从 others 中向前取一条加入 trimmed 头部
-      const idx = others.indexOf(trimmed[0]) - 1;
-      if (idx < 0) break;
-      trimmed.unshift(others[idx]);
+    let start = others.length - 36;
+    // 向前扫描：确保不从 tool 调用轮次的中间切断
+    // 如果 start 落在 tool 消息或未完成的 assistant(tool_calls) 上，向后/前调整
+    while (start > 0 && start < others.length) {
+      const msg = others[start];
+      if (msg.role === 'tool') {
+        // tool 消息不能脱离其 assistant(tool_calls)，向前走
+        start--;
+      } else if (msg.role === 'assistant' && msg.tool_calls) {
+        // 遇到 assistant(tool_calls)，检查后面是否有 tool 结果
+        const next = others[start + 1];
+        if (next && next.role === 'tool') {
+          break; // 后面有 tool 结果，完整的 tool 调用轮次，从这里保留即可
+        }
+        // 没有 tool 结果——这是不完整的残留，跳过这条
+        start++;
+      } else {
+        // 普通消息，安全起点
+        break;
+      }
     }
-    conversation = [preserveFirst, ...trimmed];
+    conversation = [preserveFirst, ...others.slice(start)];
   }
 }
 
@@ -479,21 +492,33 @@ function refreshSystemPrompt() {
   } catch (_) {}
 }
 
-// ====== 清理孤立的 tool 消息 ======
+// ====== 清理孤立的 tool 消息和不完整的 tool_calls ======
 function cleanOrphanTools() {
-  // 如果历史中存在 tool 消息但没有前置的 assistant(tool_calls)，移除它们
+  // 用 inToolBlock 标记追踪是否在 assistant(tool_calls) → tool results 块内
+  // 比检查紧邻 predecessor 更健壮：多个 tool 结果串在一起时不会误判
   const cleaned = [conversation[0]]; // 保留 system
+  let inToolBlock = false;
   for (let i = 1; i < conversation.length; i++) {
     const msg = conversation[i];
-    if (msg.role === 'tool') {
-      // 检查前一条是否是 assistant 且包含 tool_calls
-      const prev = conversation[i - 1];
-      if (prev && prev.role === 'assistant' && prev.tool_calls) {
+    if (msg.role === 'assistant' && msg.tool_calls) {
+      inToolBlock = true;
+      cleaned.push(msg);
+    } else if (msg.role === 'tool') {
+      if (inToolBlock) {
         cleaned.push(msg);
       }
-      // 否则丢弃这个孤立的 tool 消息
+      // 否则：没有前置 assistant(tool_calls) 的孤儿 tool，丢弃
     } else {
+      // 普通消息（user / assistant 纯文本），结束当前 tool 块
+      inToolBlock = false;
       cleaned.push(msg);
+    }
+  }
+  // 收尾：如果末尾残留不完整的 assistant(tool_calls)（无 tool 结果跟随），移除
+  if (cleaned.length > 1) {
+    const last = cleaned[cleaned.length - 1];
+    if (last.role === 'assistant' && last.tool_calls) {
+      cleaned.pop();
     }
   }
   conversation = cleaned;
