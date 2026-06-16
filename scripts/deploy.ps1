@@ -240,7 +240,10 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-OK "cc-connect 已推送到手机"
 
-# 清理临时文件
+# 清理手机 /sdcard/Download/ 的中转文件（已 pipe 进 Termux）
+adb shell rm -f /sdcard/Download/cc-connect-linux-arm64 2>$null
+
+# 清理 PC 临时下载
 if ($ccBin -ne $desktopFilePath) {
     Remove-Item $ccBin -ErrorAction SilentlyContinue
 }
@@ -301,6 +304,9 @@ if ($LASTEXITCODE -ne 0) {
     exit 0
 }
     Write-OK "文件已推送到 Termux"
+
+    # 清理手机 /sdcard/Download/ 的中转文件
+    adb shell rm -rf /sdcard/Download/pocket-wechat-bot 2>$null
 
     # 验证关键文件（config.toml.template 可能因 tar/pipe 问题丢失）
     $tplExists = Test-Termux "test -f $PhoneRepo/config/config.toml.template"

@@ -79,6 +79,8 @@ if ($phoneHash -eq $currentHash) {
     adb shell $copyCmd 2>$null
 
     Remove-Item $Tgz -ErrorAction SilentlyContinue
+    # 清理手机 /sdcard/Download/ 的中转文件
+    adb shell rm -rf /sdcard/Download/pocket-wechat-bot 2>$null
 
     # 验证
     if (Test-Termux "test -f $PhoneRepo/scripts/setup-phone.sh") {
