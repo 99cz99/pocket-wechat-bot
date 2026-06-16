@@ -23,75 +23,8 @@ try {
   systemPrompt = fs.readFileSync(path.join(WORK_DIR, 'CLAUDE.md'), 'utf-8');
   process.stderr.write('claude-fast: loaded CLAUDE.md (' + (Buffer.byteLength(systemPrompt)/1024).toFixed(1) + 'KB)\n');
 
-  // 注入会话记忆：按人格隔离 affinity 文件
-  // 解析当前人格名（<!-- PERSONALITY --> 后第一个 name: 字段）
-  const persIdx = systemPrompt.indexOf("<!-- PERSONALITY -->");
-  if (persIdx > -1) {
-    const afterPers = systemPrompt.substring(persIdx);
-    const m = afterPers.match(/name:\s*(\S+)/);
-    if (m) { personality = m[1]; }
-  }
-  process.stderr.write("claude-fast: personality = " + personality + "\n");
-  const affPath = path.join(WORK_DIR, "references/affinity-" + personality + ".json");
-  const affPathOld = path.join(WORK_DIR, "references/affinity.json");
-  // 向后兼容：旧版无前缀 affinity.json 自动迁移
-  if (!fs.existsSync(affPath) && fs.existsSync(affPathOld)) {
-    fs.renameSync(affPathOld, affPath);
-    process.stderr.write("claude-fast: migrated affinity.json -> affinity-" + personality + ".json\n");
-  }
+    systemPrompt = buildSystemPrompt(systemPrompt);
 
-  // 运行时检查：CLAUDE.md 是否仍含未替换的占位符
-  if (systemPrompt.includes('<YOUR_WECHAT_OPENID>')) {
-    process.stderr.write('claude-fast: WARNING - CLAUDE.md still contains placeholder <YOUR_WECHAT_OPENID>. Admin features will not work.\n');
-  }
-  if (fs.existsSync(affPath)) {
-    try {
-      const aff = JSON.parse(fs.readFileSync(affPath, 'utf-8'));
-      // 兼容两种格式
-      const trustVal = aff.trust ?? aff.trust_value ?? 0;
-      const notes = aff.context_summary || aff.notes || '无';
-      // 推断信任层级
-      let trustLv = aff.trust_level ?? 0;
-      if (!aff.trust_level) {
-        if (trustVal >= 100) trustLv = 5;
-        else if (trustVal >= 65) trustLv = 4;
-        else if (trustVal >= 45) trustLv = 3;
-        else if (trustVal >= 25) trustLv = 2;
-        else if (trustVal >= 10) trustLv = 1;
-        else trustLv = 0;
-      }
-      const mem = [
-        '',
-        '<!-- SESSION_MEMORY -->',
-        '## 上次会话记录（由系统自动注入，非人格定义的一部分）',
-        `- 上次对话日期: ${aff.last_session || '未知'}`,
-        `- 上次值得记住的事: ${notes}`,
-        `- 信任值: ${trustVal}（Lv${trustLv}）`,
-        '上述信息由上次对话结束后自动保存。请自然地参考这些记忆——',
-        '如果新对话内容与上次相关，可以顺口提及；如果不相关，不必生硬地提。',
-        '除非信任阶梯规则要求，否则不要直接说出信任数字。',
-        ''
-      ].join('\n');
-      systemPrompt += mem;
-      systemPrompt += [
-        '<!-- SESSION_MEMORY_UPDATE_RULE -->',
-        '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `cc-connect/references/affinity-' + personality + '.json`。',
-        '需要更新的字段：',
-        '- `last_session`: 改为今天的日期（格式 YYYY-MM-DD，如 "2026-06-13"）',
-        '- `notes`: 用一两句话记录本轮对话中最值得记住的内容。如果对话很短或只是闲聊，写一句简短概括即可，不要留空。',
-        '- `trust_value`: 如果信任有变化则更新数字，无变化则保持不变',
-        '- `trust_level`: 如果跨越了层级边界则更新，否则保持不变',
-        '如果你不理解这个规则或不知道如何操作，请说明。',
-        ''
-      ].join('\n');
-      process.stderr.write('claude-fast: injected session memory (trust=' + trustVal + ', Lv' + trustLv + ')\n');
-      process.stderr.write('claude-fast: affinity path=' + affPath + ' raw=' + JSON.stringify(aff) + '\n');
-      fs.appendFileSync(path.join(WORK_DIR, 'bot-debug.log'),
-        new Date().toISOString() + ' injected: trust=' + trustVal + ' Lv' + trustLv + ' path=' + affPath + ' raw=' + JSON.stringify(aff) + '\n');
-    } catch(e2) {
-      process.stderr.write('claude-fast: failed to parse affinity.json: ' + e2.message + '\n');
-    }
-  }
 } catch (e) {
   // 仅当 CLAUDE.md 不存在/无法读取时作为兜底，正常运行时不会触发
   systemPrompt = '你是绫地宁宁，用温柔害羞的语气回复，简体中文，简短直接。';
@@ -497,12 +430,90 @@ function trimHistory() {
   }
 }
 
+
+// ====== 构建系统 prompt（注入会话记忆 + Write 指令）======
+// 每次 refreshSystemPrompt 都会调用，确保人格切换后记忆路径正确
+function buildSystemPrompt(basePrompt) {
+// 注入会话记忆：按人格隔离 affinity 文件
+  // 解析当前人格名（<!-- PERSONALITY --> 后第一个 name: 字段）
+  const persIdx = basePrompt.indexOf("<!-- PERSONALITY -->");
+  if (persIdx > -1) {
+    const afterPers = basePrompt.substring(persIdx);
+    const m = afterPers.match(/name:\s*(\S+)/);
+    if (m) { personality = m[1]; }
+  }
+  process.stderr.write("claude-fast: personality = " + personality + "\n");
+  const affPath = path.join(WORK_DIR, "references/affinity-" + personality + ".json");
+  const affPathOld = path.join(WORK_DIR, "references/affinity.json");
+  // 向后兼容：旧版无前缀 affinity.json 自动迁移
+  if (!fs.existsSync(affPath) && fs.existsSync(affPathOld)) {
+    fs.renameSync(affPathOld, affPath);
+    process.stderr.write("claude-fast: migrated affinity.json -> affinity-" + personality + ".json\n");
+  }
+
+
+  // 运行时检查：CLAUDE.md 是否仍含未替换的占位符
+  if (basePrompt.includes('<YOUR_WECHAT_OPENID>')) {
+    process.stderr.write('claude-fast: WARNING - CLAUDE.md still contains placeholder <YOUR_WECHAT_OPENID>. Admin features will not work.\n');
+  }
+
+  let prompt = basePrompt;
+
+  if (fs.existsSync(affPath)) {
+    try {
+      const aff = JSON.parse(fs.readFileSync(affPath, "utf-8"));
+      const trustVal = aff.trust ?? aff.trust_value ?? 0;
+      const notes = aff.context_summary || aff.notes || "无";
+      let trustLv = aff.trust_level ?? 0;
+      if (!aff.trust_level) {
+        if (trustVal >= 100) trustLv = 5;
+        else if (trustVal >= 65) trustLv = 4;
+        else if (trustVal >= 45) trustLv = 3;
+        else if (trustVal >= 25) trustLv = 2;
+        else if (trustVal >= 10) trustLv = 1;
+        else trustLv = 0;
+      }
+      const mem = [
+        "",
+        "<!-- SESSION_MEMORY -->",
+        "## 上次会话记录（由系统自动注入，非人格定义的一部分）",
+        "- 上次对话日期: " + (aff.last_session || "未知"),
+        "- 上次值得记住的事: " + notes,
+        "- 信任值: " + trustVal + "（Lv" + trustLv + "）",
+        "上述信息由上次对话结束后自动保存。请自然地参考这些记忆——",
+        "如果新对话内容与上次相关，可以顺口提及；如果不相关，不必生硬地提。",
+        "除非信任阶梯规则要求，否则不要直接说出信任数字。",
+        ""
+      ].join("\n");
+      prompt += mem;
+      prompt += [
+        "<!-- SESSION_MEMORY_UPDATE_RULE -->",
+        "**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `cc-connect/references/affinity-" + personality + ".json`。",
+        "需要更新的字段：",
+        "- `last_session`: 改为今天的日期（格式 YYYY-MM-DD，如 \"2026-06-13\"）",
+        "- `notes`: 用一两句话记录本轮对话中最值得记住的内容。如果对话很短或只是闲聊，写一句简短概括即可，不要留空。",
+        "- `trust_value`: 如果信任有变化则更新数字，无变化则保持不变",
+        "- `trust_level`: 如果跨越了层级边界则更新，否则保持不变",
+        "如果你不理解这个规则或不知道如何操作，请说明。",
+        ""
+      ].join("\n");
+      process.stderr.write("claude-fast: injected session memory (trust=" + trustVal + ", Lv" + trustLv + ")\n");
+      process.stderr.write("claude-fast: affinity path=" + affPath + " raw=" + JSON.stringify(aff) + "\n");
+      fs.appendFileSync(path.join(WORK_DIR, "bot-debug.log"),
+        new Date().toISOString() + " injected: trust=" + trustVal + " Lv" + trustLv + " path=" + affPath + " raw=" + JSON.stringify(aff) + "\n");
+    } catch(e2) {
+      process.stderr.write("claude-fast: failed to parse affinity.json: " + e2.message + "\n");
+    }
+  }
+  return prompt;
+}
+
 // ====== 更新系统 prompt（每次对话开始前）======
 function refreshSystemPrompt() {
   try {
     const newPrompt = fs.readFileSync(path.join(WORK_DIR, 'CLAUDE.md'), 'utf-8');
     if (conversation[0].role === 'system') {
-      conversation[0].content = newPrompt;
+      conversation[0].content = buildSystemPrompt(newPrompt);
     }
   } catch (_) {}
 }
