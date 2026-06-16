@@ -90,8 +90,12 @@ if ($phoneHash -eq $currentHash) {
     }
 }
 
-# 3. 同步 CLAUDE.md 和 skills
-Write-Host "[..] 同步人格文件..." -ForegroundColor Cyan
+# 3. 同步运行时代码
+Write-Host "[..] 同步运行时代码..." -ForegroundColor Cyan
+# claude-fast.js：bot 实际执行的包装器，必须同步到 ~/bin/
+Invoke-Termux "cp $PhoneRepo/claude-fast.js /data/data/com.termux/files/home/bin/claude-fast.js" | Out-Null
+Write-Host "[OK] claude-fast.js 已同步" -ForegroundColor Green
+# CLAUDE.md 和 skills：bot 读取的人格文件
 Invoke-Termux "cp $PhoneRepo/CLAUDE.md /data/data/com.termux/files/home/cc-connect/CLAUDE.md" | Out-Null
 if (Test-Termux "test -d $PhoneRepo/skills/nene") {
     Invoke-Termux "mkdir -p /data/data/com.termux/files/home/skills/nene && cp -r $PhoneRepo/skills/nene/* /data/data/com.termux/files/home/skills/nene/" | Out-Null
