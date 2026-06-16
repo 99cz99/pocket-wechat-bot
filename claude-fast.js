@@ -23,7 +23,7 @@ try {
   systemPrompt = fs.readFileSync(path.join(WORK_DIR, 'CLAUDE.md'), 'utf-8');
   process.stderr.write('claude-fast: loaded CLAUDE.md (' + (Buffer.byteLength(systemPrompt)/1024).toFixed(1) + 'KB)\n');
 
-    systemPrompt = buildSystemPrompt(systemPrompt);
+  systemPrompt = buildSystemPrompt(systemPrompt);
 
 } catch (e) {
   // 仅当 CLAUDE.md 不存在/无法读取时作为兜底，正常运行时不会触发
@@ -434,7 +434,7 @@ function trimHistory() {
 // ====== 构建系统 prompt（注入会话记忆 + Write 指令）======
 // 每次 refreshSystemPrompt 都会调用，确保人格切换后记忆路径正确
 function buildSystemPrompt(basePrompt) {
-// 注入会话记忆：按人格隔离 affinity 文件
+  // 注入会话记忆：按人格隔离 affinity 文件
   // 解析当前人格名（<!-- PERSONALITY --> 后第一个 name: 字段）
   const persIdx = basePrompt.indexOf("<!-- PERSONALITY -->");
   if (persIdx > -1) {
