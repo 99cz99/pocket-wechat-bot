@@ -89,23 +89,23 @@ cleanup_duplicates() {
     local cleaned=0
     local issues=0
 
-    # 1. 检测重复的 affinity.json
+    # 1. 检测重复的 affinity 文件（旧名 affinity.json + 新名 affinity-*.json）
     local aff_count
-    aff_count=$(find "$HOME" -name "affinity.json" -type f 2>/dev/null | wc -l)
+    aff_count=$(find "$HOME" \( -name "affinity.json" -o -name "affinity-*.json" \) -type f 2>/dev/null | wc -l)
     if [ "$aff_count" -gt 1 ]; then
-        warn "发现 $aff_count 个 affinity.json（应有 1 个）："
-        find "$HOME" -name "affinity.json" -type f 2>/dev/null | while read -r f; do
+        warn "发现 $aff_count 个 affinity 文件（应有 1 个）："
+        find "$HOME" \( -name "affinity.json" -o -name "affinity-*.json" \) -type f 2>/dev/null | while read -r f; do
             echo "    $f"
         done
         # 保留 cc-connect/references/ 下的，删除其余
-        find "$HOME" -path "*/cc-connect/references/affinity.json" -prune -o -name "affinity.json" -type f -print | while read -r f; do
+        find "$HOME" -path "*/cc-connect/references/affinity*" -prune -o \( -name "affinity.json" -o -name "affinity-*.json" \) -type f -print | while read -r f; do
             info "  删除多余: $f"
             rm -f "$f"
             cleaned=$((cleaned+1))
         done
         issues=$((issues+1))
     else
-        ok "affinity.json（$aff_count 个）"
+        ok "affinity 文件（$aff_count 个）"
     fi
 
     # 2. 检测 .claude/skills 残留

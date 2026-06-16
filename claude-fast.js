@@ -86,7 +86,7 @@ const TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          file_path: { type: 'string', description: '文件路径，相对于 HOME 目录（如 cc-connect/CLAUDE.md 或 cc-connect/references/affinity.json）' },
+          file_path: { type: 'string', description: '文件路径，相对于 HOME 目录（如 cc-connect/CLAUDE.md 或 cc-connect/references/affinity-当前人格.json）' },
           content: { type: 'string', description: '要写入的内容' }
         },
         required: ['file_path', 'content']
@@ -502,7 +502,7 @@ function buildSystemPrompt(basePrompt) {
       fs.appendFileSync(path.join(WORK_DIR, "bot-debug.log"),
         new Date().toISOString() + " injected: trust=" + trustVal + " Lv" + trustLv + " path=" + affPath + " raw=" + JSON.stringify(aff) + "\n");
     } catch(e2) {
-      process.stderr.write("claude-fast: failed to parse affinity.json: " + e2.message + "\n");
+      process.stderr.write("claude-fast: failed to parse affinity file: " + e2.message + "\n");
     }
   }
   return prompt;
