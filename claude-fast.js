@@ -15,6 +15,7 @@ const MODEL = process.env.MODEL || 'deepseek-v4-pro';
 const HOME = process.env.HOME || '/data/data/com.termux/files/home';
 const WORK_DIR = HOME + '/cc-connect';
 const MAX_TOOL_ROUNDS = 5;
+let personality = "nene"; // 当前人格，由系统 prompt 解析得出
 
 // ====== 系统 prompt ======
 let systemPrompt = '';
@@ -22,8 +23,22 @@ try {
   systemPrompt = fs.readFileSync(path.join(WORK_DIR, 'CLAUDE.md'), 'utf-8');
   process.stderr.write('claude-fast: loaded CLAUDE.md (' + (Buffer.byteLength(systemPrompt)/1024).toFixed(1) + 'KB)\n');
 
-  // 注入会话记忆：让重启后的bot知道上次聊了什么
-  const affPath = path.join(WORK_DIR, 'references/affinity.json');
+  // 注入会话记忆：按人格隔离 affinity 文件
+  // 解析当前人格名（<!-- PERSONALITY --> 后第一个 name: 字段）
+  const persIdx = systemPrompt.indexOf("<!-- PERSONALITY -->");
+  if (persIdx > -1) {
+    const afterPers = systemPrompt.substring(persIdx);
+    const m = afterPers.match(/name:\s*(\S+)/);
+    if (m) { personality = m[1]; }
+  }
+  process.stderr.write("claude-fast: personality = " + personality + "\n");
+  const affPath = path.join(WORK_DIR, "references/affinity-" + personality + ".json");
+  const affPathOld = path.join(WORK_DIR, "references/affinity.json");
+  // 向后兼容：旧版无前缀 affinity.json 自动迁移
+  if (!fs.existsSync(affPath) && fs.existsSync(affPathOld)) {
+    fs.renameSync(affPathOld, affPath);
+    process.stderr.write("claude-fast: migrated affinity.json -> affinity-" + personality + ".json\n");
+  }
 
   // 运行时检查：CLAUDE.md 是否仍含未替换的占位符
   if (systemPrompt.includes('<YOUR_WECHAT_OPENID>')) {
@@ -60,7 +75,7 @@ try {
       systemPrompt += mem;
       systemPrompt += [
         '<!-- SESSION_MEMORY_UPDATE_RULE -->',
-        '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `cc-connect/references/affinity.json`。',
+        '**强制规则**：每一轮回答结束后，你必须调用 Write 工具更新 `cc-connect/references/affinity-' + personality + '.json`。',
         '需要更新的字段：',
         '- `last_session`: 改为今天的日期（格式 YYYY-MM-DD，如 "2026-06-13"）',
         '- `notes`: 用一两句话记录本轮对话中最值得记住的内容。如果对话很短或只是闲聊，写一句简短概括即可，不要留空。',
@@ -268,7 +283,7 @@ function executeTool(name, args) {
 
 // ====== 自动更新 affinity ======
 function updateAffinityAuto() {
-  const affPath = path.join(WORK_DIR, 'references/affinity.json');
+  const affPath = path.join(WORK_DIR, 'references/affinity-' + personality + '.json');
   try {
     let aff = { trust: 0, last_session: '', context_summary: '' };
     if (fs.existsSync(affPath)) {
