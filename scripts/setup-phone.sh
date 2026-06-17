@@ -949,7 +949,7 @@ print_todo() {
     echo "  ─── 常用操作 ───"
     echo "  查看日志:  cat ~/cc-connect/cc-connect.log"
     echo "  前台运行:  bash ~/start-nene.sh"
-    echo "  重启 bot:  pkill -f cc-connect && bash ~/start-nene.sh"
+    echo "  重启 bot:  pkill -f cc-connect && rm -f ~/.cc-connect/.config.toml.lock && bash ~/start-nene.sh"
     echo "  管理面板:  http://127.0.0.1:9820"
     echo "  更新项目:  cd ~/pocket-wechat-bot && git pull && cp claude-fast.js ~/bin/"
     echo ""

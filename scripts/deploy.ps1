@@ -728,7 +728,7 @@ Write-Host ""
 
 Write-Host "  --- 常用操作 ---"
 Write-Host "  查看日志:  cat ~/cc-connect/cc-connect.log"
-Write-Host "  重启 bot:  pkill -f cc-connect && bash ~/start-nene.sh"
+Write-Host "  重启 bot:  pkill -f cc-connect && rm -f ~/.cc-connect/.config.toml.lock && bash ~/start-nene.sh"
 Write-Host "  管理面板:  http://127.0.0.1:9820"
 Write-Host "  重新部署:  再次右键运行本脚本（已完成的步骤自动跳过）"
 Write-Host ""
