@@ -342,9 +342,42 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # ============================================================
-# 步骤 3: 基础环境安装（全自动）
+# 步骤 3: 同步运行时文件
 # ============================================================
-Write-Step 3 "基础环境安装（全自动，约 2-5 分钟）"
+Write-Step 3 "同步运行时文件"
+
+# claude-fast.js：bot 实际执行的 API 包装器
+Invoke-Termux "cp $PhoneRepo/claude-fast.js /data/data/com.termux/files/home/bin/claude-fast.js" | Out-Null
+Write-OK "claude-fast.js → ~/bin/"
+
+# start-bot.sh：启动脚本
+Invoke-Termux "cp $PhoneRepo/scripts/start-bot.sh /data/data/com.termux/files/home/start-nene.sh && chmod +x /data/data/com.termux/files/home/start-nene.sh" | Out-Null
+Write-OK "start-nene.sh 已同步"
+
+# CLAUDE.md：bot 读取的人格文件（保留手机端已有的真实 OpenID）
+$openid = (Invoke-Termux "grep -oP '[a-zA-Z0-9_-]+@im\.wechat' /data/data/com.termux/files/home/cc-connect/CLAUDE.md 2>/dev/null | head -1").Trim()
+if ($openid -and ($openid -match '@im\.wechat')) {
+    Invoke-Termux "cp $PhoneRepo/CLAUDE.md /data/data/com.termux/files/home/cc-connect/CLAUDE.md && sed -i 's/<YOUR_WECHAT_OPENID>/$openid/' /data/data/com.termux/files/home/cc-connect/CLAUDE.md" | Out-Null
+    Write-OK "CLAUDE.md 已同步（OpenID 已保留）"
+} else {
+    Invoke-Termux "cp $PhoneRepo/CLAUDE.md /data/data/com.termux/files/home/cc-connect/CLAUDE.md" | Out-Null
+    Write-OK "CLAUDE.md 已同步（未检测到 OpenID，请运行 fix-openid.sh）"
+}
+
+# skills/nene/：AI Read 工具读取的人格参考文件
+if (Test-Termux "test -d $PhoneRepo/skills/nene") {
+    Invoke-Termux "mkdir -p /data/data/com.termux/files/home/skills/nene && cp -r $PhoneRepo/skills/nene/* /data/data/com.termux/files/home/skills/nene/" | Out-Null
+    Write-OK "skills/nene/ 已同步"
+}
+
+# ============================================================
+# 步骤 4: 基础环境安装（仅首次部署）
+# ============================================================
+if ($isRerun) {
+    Write-Step 4 "基础环境安装（已部署，跳过）"
+    Write-OK "手机环境已配置，跳过 setup-phone.sh"
+} else {
+Write-Step 4 "基础环境安装（全自动，约 2-5 分钟）"
 
 Write-Info "正在手机上安装依赖和配置环境..."
 Write-Info "（这步不需要你操作，稍等...）"
@@ -371,11 +404,16 @@ $setupOutput -split "`n" | ForEach-Object {
 }
 
 Write-Host ""
+}  # end of if ($isRerun) / else for 基础环境安装
 
 # ============================================================
-# 步骤 4: 配置 API Key（PC 端交互）
+# 步骤 5: 配置 API Key（仅首次部署）
 # ============================================================
-Write-Step 4 "配置 DeepSeek API Key"
+if ($isRerun) {
+    Write-Step 5 "配置 DeepSeek API Key（已部署，跳过）"
+    Write-OK "API Key 已配置，跳过"
+} else {
+Write-Step 5 "配置 DeepSeek API Key"
 
 # 1. 确保 bashrc 有 API Key
 $apiKeySet = Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/home/.bashrc"
@@ -449,11 +487,16 @@ exec /usr/bin/node /home/bin/claude-fast.js "\$@"
 } else {
     Write-OK "claude 包装器正常"
 }
+}  # end of if ($isRerun) / else for API Key
 
 # ============================================================
-# 步骤 5: 配置 config.toml
+# 步骤 6: 配置 config.toml（仅首次部署）
 # ============================================================
-Write-Step 5 "配置文件（config.toml）"
+if ($isRerun) {
+    Write-Step 6 "配置文件 config.toml（已部署，跳过）"
+    Write-OK "config.toml 已配置，跳过"
+} else {
+Write-Step 6 "配置文件（config.toml）"
 
 # 获取 API Key
 $apiKeyVal = Invoke-Termux "grep 'ANTHROPIC_API_KEY' /data/data/com.termux/files/home/.bashrc 2>/dev/null | tail -1 | sed 's/.*=//'"
@@ -478,11 +521,16 @@ if ($remaining -eq "0") {
     Write-Host "  稍后会在下一步获取微信凭据，完成后自动填入。"
     Write-Host "  OpenID 可以在 bot 启动后发 /whoami 获取。"
 }
+}  # end of if ($isRerun) / else for config.toml
 
 # ============================================================
-# 步骤 6: 微信凭据
+# 步骤 7: 微信凭据（仅首次部署）
 # ============================================================
-Write-Step 6 "微信扫码获取凭据"
+if ($isRerun) {
+    Write-Step 7 "微信扫码获取凭据（已部署，跳过）"
+    Write-OK "微信凭据已配置，跳过"
+} else {
+Write-Step 7 "微信扫码获取凭据"
 
 $tokenOk = -not (Test-Termux "grep -q '<YOUR_BOT_TOKEN>' /data/data/com.termux/files/home/.cc-connect/config.toml")
 
@@ -597,27 +645,28 @@ echo "回到 PC 按回车继续部署。"
         }
     } while ($true)
 }
+}  # end of if ($isRerun) / else for 微信凭据
 
 # ============================================================
-# 步骤 7: 启动 Bot
+# 步骤 8: 重启 Bot
 # ============================================================
-Write-Step 7 "启动 Bot"
+Write-Step 8 "重启 Bot"
 
-Write-Info "部署启动脚本..."
-$startOut = Invoke-Termux "cd $PhoneRepo && REPO_DIR='$PhoneRepo' $PhoneBash -c 'source scripts/setup-phone.sh; step_startup'"
-Write-Host $startOut
-
-Write-Info "正在启动 cc-connect..."
-$launchOut = Invoke-Termux "cd $PhoneRepo && REPO_DIR='$PhoneRepo' $PhoneBash -c 'source scripts/setup-phone.sh; step_launch'"
-Write-Host $launchOut
-
-# 验证
 $running = Test-Termux "pgrep -f cc-connect"
 if ($running) {
-    Write-OK "Bot 正在运行"
+    Write-Info "停止旧进程..."
+    Invoke-Termux "pkill -f cc-connect 2>/dev/null; sleep 1" | Out-Null
+    Write-OK "旧进程已停止"
+}
+
+Write-Info "启动 cc-connect..."
+Invoke-Termux "cd /data/data/com.termux/files/home && nohup bash start-nene.sh > /dev/null 2>&1 &" | Out-Null
+Start-Sleep -Seconds 3
+
+if (Test-Termux "pgrep -f cc-connect") {
+    Write-OK "Bot 已启动"
 } else {
-    Write-Warn "Bot 未能启动，可能因为缺少配置"
-    Write-Host "  完成下方待办事项后重跑 deploy.bat 即可"
+    Write-Warn "Bot 启动失败，请在手机 Termux 手动运行: bash ~/start-nene.sh"
 }
 
 Write-Host ""
@@ -629,9 +678,14 @@ Write-Host "    bash ~/start-nene.sh"
 Write-Host "  ──────────────────────────────"
 
 # ============================================================
-# 步骤 8: OpenID 配置
+# 步骤 9: OpenID 配置（仅首次部署）
 # ============================================================
-Write-Step 8 "配置 OpenID"
+if ($isRerun) {
+    Write-Step 9 "配置 OpenID（已部署，跳过）"
+    $openidOk = Test-Termux "test -f /data/data/com.termux/files/home/cc-connect/CLAUDE.md && ! grep -q '<YOUR_WECHAT_OPENID>' /data/data/com.termux/files/home/cc-connect/CLAUDE.md"
+    if ($openidOk) { Write-OK "OpenID 已配置" } else { Write-Warn "OpenID 占位符未替换，请运行 fix-openid.sh" }
+} else {
+Write-Step 9 "配置 OpenID"
 
 $openidOk = Test-Termux "test -f /data/data/com.termux/files/home/cc-connect/CLAUDE.md && ! grep -q '<YOUR_WECHAT_OPENID>' /data/data/com.termux/files/home/cc-connect/CLAUDE.md"
 
@@ -666,11 +720,12 @@ if ($openidOk) {
         }
     } while ($true)
 }
+}  # end of if ($isRerun) / else for OpenID
 
 # ============================================================
-# 步骤 9: 收尾检查清单
+# 步骤 10: 收尾检查清单
 # ============================================================
-Write-Step 9 "部署后检查清单"
+Write-Step 10 "部署后检查清单"
 
 Write-Host ""
 Write-Host "  --- 状态检查 ---"
