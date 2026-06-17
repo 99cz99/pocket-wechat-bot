@@ -396,29 +396,37 @@ WRAPPER_EOF
 step_personality() {
     section "Step 6: 部署人格文件"
 
-    # 用 SKILL.md 的 md5 判断是否需要更新（CLAUDE.md 会被 fix-openid 修改，不能比 md5）
-    local skill_src="$REPO_DIR/skills/nene/SKILL.md"
-    local skill_dst="$HOME/skills/nene/SKILL.md"
-    local skill_unchanged=false
-    if [ -f "$skill_src" ] && [ -f "$skill_dst" ]; then
-        local src_md5 dst_md5
-        src_md5=$(md5sum "$skill_src" | cut -d' ' -f1)
-        dst_md5=$(md5sum "$skill_dst" | cut -d' ' -f1)
-        [ "$src_md5" = "$dst_md5" ] && skill_unchanged=true
+    # 检测 CLAUDE.md 是否变更（归一化 OpenID 后再比 md5，避免 fix-openid 干扰）
+    local claude_unchanged=false
+    if [ -f "$REPO_DIR/CLAUDE.md" ] && [ -f "$HOME/cc-connect/CLAUDE.md" ]; then
+        local repo_claude_md5 run_claude_md5
+        repo_claude_md5=$(md5sum "$REPO_DIR/CLAUDE.md" | cut -d' ' -f1)
+        # 将运行时 CLAUDE.md 中的真实 OpenID 替换为占位符后再比 md5
+        run_claude_md5=$(sed 's/[a-zA-Z0-9_-]\+@im\.wechat/<YOUR_WECHAT_OPENID>/g' "$HOME/cc-connect/CLAUDE.md" | md5sum | cut -d' ' -f1)
+        [ "$repo_claude_md5" = "$run_claude_md5" ] && claude_unchanged=true
     fi
 
-    if step_done "personality_files" \
-       && [ -f "$HOME/cc-connect/CLAUDE.md" ] \
-       && [ -d "$HOME/skills/nene" ] \
-       && $skill_unchanged; then
+    # 检测 skills/nene/ 目录是否变更（全目录联合 md5，而非只看 SKILL.md）
+    local skills_unchanged=false
+    if [ -d "$REPO_DIR/skills/nene" ] && [ -d "$HOME/skills/nene" ]; then
+        local repo_skills_md5 run_skills_md5
+        repo_skills_md5=$(find "$REPO_DIR/skills/nene" -type f | sort | xargs md5sum | md5sum | cut -d' ' -f1)
+        run_skills_md5=$(find "$HOME/skills/nene" -type f | sort | xargs md5sum | md5sum | cut -d' ' -f1)
+        [ "$repo_skills_md5" = "$run_skills_md5" ] && skills_unchanged=true
+    fi
+
+    if step_done "personality_files" && $claude_unchanged && $skills_unchanged; then
         skip "人格文件已部署（内容一致）"
         return
     fi
     if step_done "personality_files"; then
-        if ! $skill_unchanged; then
-            warn "repo 已更新，重新部署人格文件..."
+        local reasons=""
+        if ! $claude_unchanged; then reasons="$reasons CLAUDE.md"; fi
+        if ! $skills_unchanged; then reasons="$reasons skills/nene/"; fi
+        if [ -n "$reasons" ]; then
+            warn "文件已变更：$reasons，重新部署..."
         else
-            warn "状态文件记录已部署，但人格文件缺失，重新部署..."
+            warn "状态文件记录已部署，但文件缺失，重新部署..."
         fi
         sed -i '/personality_files/d' "$STATE_FILE" 2>/dev/null || true
     fi
