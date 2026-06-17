@@ -306,12 +306,27 @@ step_proot() {
 step_claude_fast() {
     section "Step 4: 部署 claude-fast.js"
 
-    if step_done "claude_fast_js" && [ -f "$HOME/bin/claude-fast.js" ]; then
-        skip "claude-fast.js 已部署"
+    # 用 md5 判断是否需要更新
+    local js_src="$REPO_DIR/claude-fast.js"
+    local js_dst="$HOME/bin/claude-fast.js"
+    local js_unchanged=false
+    if [ -f "$js_src" ] && [ -f "$js_dst" ]; then
+        local src_md5 dst_md5
+        src_md5=$(md5sum "$js_src" | cut -d' ' -f1)
+        dst_md5=$(md5sum "$js_dst" | cut -d' ' -f1)
+        [ "$src_md5" = "$dst_md5" ] && js_unchanged=true
+    fi
+
+    if step_done "claude_fast_js" && [ -f "$HOME/bin/claude-fast.js" ] && $js_unchanged; then
+        skip "claude-fast.js 已部署（内容一致）"
         return
     fi
     if step_done "claude_fast_js"; then
-        warn "状态文件记录已部署，但 claude-fast.js 缺失，重新部署..."
+        if ! $js_unchanged; then
+            warn "repo 已更新，重新部署 claude-fast.js..."
+        else
+            warn "状态文件记录已部署，但 claude-fast.js 缺失，重新部署..."
+        fi
         sed -i '/claude_fast_js/d' "$STATE_FILE" 2>/dev/null || true
     fi
 
