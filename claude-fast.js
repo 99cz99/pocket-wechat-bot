@@ -552,8 +552,14 @@ function cleanOrphanTools() {
 
 // ====== 主循环 ======
 const rl = readline.createInterface({ input: process.stdin });
+let isProcessing = false;
 
 function processLine(line) {
+  if (isProcessing) {
+    process.stderr.write('claude-fast: skipped (already processing)\n');
+    return;
+  }
+
   const raw = line.trim();
   if (!raw) return;
 
@@ -568,6 +574,7 @@ function processLine(line) {
   // 添加用户消息到历史
   conversation.push({ role: 'user', content: msg });
 
+  isProcessing = true;
   callAPIStream(conversation, (err, text) => {
     if (err) {
       emit({
@@ -586,6 +593,7 @@ function processLine(line) {
       });
     }
     emit({ type: 'result', subtype: 'success' });
+    isProcessing = false;
   });
 }
 
