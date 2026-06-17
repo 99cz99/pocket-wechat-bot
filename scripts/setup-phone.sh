@@ -375,12 +375,30 @@ WRAPPER_EOF
 step_personality() {
     section "Step 6: 部署人格文件"
 
-    if step_done "personality_files" && [ -f "$HOME/cc-connect/CLAUDE.md" ] && [ -d "$HOME/skills/nene" ]; then
-        skip "人格文件已部署"
+    # 用 SKILL.md 的 md5 判断是否需要更新（CLAUDE.md 会被 fix-openid 修改，不能比 md5）
+    local skill_src="$REPO_DIR/skills/nene/SKILL.md"
+    local skill_dst="$HOME/skills/nene/SKILL.md"
+    local skill_unchanged=false
+    if [ -f "$skill_src" ] && [ -f "$skill_dst" ]; then
+        local src_md5 dst_md5
+        src_md5=$(md5sum "$skill_src" | cut -d' ' -f1)
+        dst_md5=$(md5sum "$skill_dst" | cut -d' ' -f1)
+        [ "$src_md5" = "$dst_md5" ] && skill_unchanged=true
+    fi
+
+    if step_done "personality_files" \
+       && [ -f "$HOME/cc-connect/CLAUDE.md" ] \
+       && [ -d "$HOME/skills/nene" ] \
+       && $skill_unchanged; then
+        skip "人格文件已部署（内容一致）"
         return
     fi
     if step_done "personality_files"; then
-        warn "状态文件记录已部署，但人格文件缺失，重新部署..."
+        if ! $skill_unchanged; then
+            warn "repo 已更新，重新部署人格文件..."
+        else
+            warn "状态文件记录已部署，但人格文件缺失，重新部署..."
+        fi
         sed -i '/personality_files/d' "$STATE_FILE" 2>/dev/null || true
     fi
 
