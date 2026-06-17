@@ -355,7 +355,8 @@ Invoke-Termux "cp $PhoneRepo/scripts/start-bot.sh /data/data/com.termux/files/ho
 Write-OK "start-nene.sh 已同步"
 
 # CLAUDE.md：bot 读取的人格文件（保留手机端已有的真实 OpenID）
-$openid = (Invoke-Termux "grep -oP '[a-zA-Z0-9_-]+@im\.wechat' /data/data/com.termux/files/home/cc-connect/CLAUDE.md 2>/dev/null | head -1").Trim()
+$openidRaw = Invoke-Termux "grep -oP '[a-zA-Z0-9_-]+@im\.wechat' /data/data/com.termux/files/home/cc-connect/CLAUDE.md 2>/dev/null | head -1"
+$openid = if ($openidRaw) { $openidRaw.Trim() } else { "" }
 if ($openid -and ($openid -match '@im\.wechat')) {
     Invoke-Termux "cp $PhoneRepo/CLAUDE.md /data/data/com.termux/files/home/cc-connect/CLAUDE.md && sed -i 's/<YOUR_WECHAT_OPENID>/$openid/' /data/data/com.termux/files/home/cc-connect/CLAUDE.md" | Out-Null
     Write-OK "CLAUDE.md 已同步（OpenID 已保留）"
