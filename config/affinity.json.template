@@ -1,6 +1,10 @@
 {
-  "trust_level": 0,
   "trust_value": 0,
+  "trust_level": 0,
   "last_session": "",
-  "notes": ""
+  "notes": "",
+  "corruption_value": 0,
+  "corruption_level": 0,
+  "total_h_scenes_completed": 0,
+  "corruption_milestones": []
 }

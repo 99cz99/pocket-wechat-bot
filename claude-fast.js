@@ -218,15 +218,15 @@ function executeTool(name, args) {
 function updateAffinityAuto() {
   const affPath = path.join(WORK_DIR, 'references/affinity-' + personality + '.json');
   try {
-    let aff = { trust: 0, last_session: '', context_summary: '' };
+    let aff = { trust_value: 0, last_session: '', notes: '' };
     if (fs.existsSync(affPath)) {
       aff = JSON.parse(fs.readFileSync(affPath, 'utf-8'));
     }
     aff.last_session = new Date().toISOString().split('T')[0];
-    if (!aff.context_summary) aff.context_summary = '对话中';
+    if (!aff.notes) aff.notes = '对话中';
     fs.writeFileSync(affPath, JSON.stringify(aff, null, 2), 'utf-8');
     fs.appendFileSync(path.join(WORK_DIR, 'bot-debug.log'),
-      new Date().toISOString() + ' autoUpdate: trust=' + (aff.trust ?? 0) + '\n');
+      new Date().toISOString() + ' autoUpdate: trust=' + (aff.trust_value ?? aff.trust ?? 0) + '\n');
   } catch (e) {
     process.stderr.write('claude-fast: autoUpdate affinity failed: ' + e.message + '\n');
   }
@@ -462,8 +462,8 @@ function buildSystemPrompt(basePrompt) {
   if (fs.existsSync(affPath)) {
     try {
       const aff = JSON.parse(fs.readFileSync(affPath, "utf-8"));
-      const trustVal = aff.trust ?? aff.trust_value ?? 0;
-      const notes = aff.context_summary || aff.notes || "无";
+      const trustVal = aff.trust_value ?? aff.trust ?? 0;
+      const notes = aff.notes || aff.context_summary || "无";
       let trustLv = aff.trust_level ?? 0;
       if (!aff.trust_level) {
         if (trustVal >= 100) trustLv = 5;
@@ -515,7 +515,9 @@ function refreshSystemPrompt() {
     if (conversation[0].role === 'system') {
       conversation[0].content = buildSystemPrompt(newPrompt);
     }
-  } catch (_) {}
+  } catch (e) {
+    process.stderr.write('claude-fast: refreshSystemPrompt failed: ' + e.message + '\n');
+  }
 }
 
 // ====== 清理孤立的 tool 消息和不完整的 tool_calls ======

@@ -113,7 +113,7 @@ if kill -0 "$CC_PID" 2>/dev/null; then
     echo "[*] 已启动~"
 else
     echo "[!] 警告：cc-connect 进程未检测到！可能启动失败。"
-    echo "    检查日志: cat ~/cc-connect/bot-debug.log"
+    echo "    检查日志: cat ~/cc-connect/cc-connect.log"
     echo "    检查配置: cat ~/.cc-connect/config.toml"
     echo "    手动前台运行测试: cd ~ && SSL_CERT_FILE=... proot ... ~/bin/cc-connect --config ~/.cc-connect/config.toml"
 fi

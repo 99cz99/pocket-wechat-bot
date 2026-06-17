@@ -226,8 +226,11 @@ if (-not $ccBin) {
 # --- 清理旧开发残留 ---
 Write-Info "清理 /sdcard/Download/ 旧文件..."
 adb shell rm -rf /sdcard/Download/pocket-wechat-bot /sdcard/Download/cc-connect-linux-arm64 2>$null
-adb shell rm -f /sdcard/Download/claude-fast*.js /sdcard/Download/CLAUDE.md /sdcard/Download/claude-wrapper* /sdcard/Download/fix-claude.sh 2>$null
-adb shell rm -f /sdcard/Download/cw-fixed.sh /sdcard/Download/fix-openid.sh /sdcard/Download/start-nene-*.sh 2>$null
+adb shell rm -f /sdcard/Download/claude-fast*.js /sdcard/Download/CLAUDE.md /sdcard/Download/claude-wrapper* 2>$null
+adb shell rm -f /sdcard/Download/fix-openid.sh /sdcard/Download/start-nene-*.sh 2>$null
+# 同时清理 /sdcard/ 根目录的旧部署残留（历史遗留）
+adb shell rm -f /sdcard/CLAUDE*.md /sdcard/claude-fast*.js /sdcard/claude-wrapper* 2>$null
+adb shell rm -f /sdcard/fix-openid.sh /sdcard/fix-claude.sh /sdcard/cw-fixed.sh /sdcard/start-nene*.sh 2>$null
 
 # --- 2.2 推送 cc-connect 到手机 ---
 Write-Info "推送 cc-connect 到手机..."
@@ -616,6 +619,14 @@ if ($running) {
     Write-Warn "Bot 未能启动，可能因为缺少配置"
     Write-Host "  完成下方待办事项后重跑 deploy.bat 即可"
 }
+
+Write-Host ""
+Write-Host "  ──────────────────────────────"
+Write-Host "  提示：日常重启 bot 请在 Termux 执行："
+Write-Host "    pkill -f cc-connect"
+Write-Host "    rm -f ~/.cc-connect/.config.toml.lock"
+Write-Host "    bash ~/start-nene.sh"
+Write-Host "  ──────────────────────────────"
 
 # ============================================================
 # 步骤 8: OpenID 配置

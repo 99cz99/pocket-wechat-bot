@@ -93,7 +93,7 @@ cleanup_duplicates() {
     local aff_count
     aff_count=$(find "$HOME" \( -name "affinity.json" -o -name "affinity-*.json" \) -type f 2>/dev/null | wc -l)
     if [ "$aff_count" -gt 1 ]; then
-        warn "发现 $aff_count 个 affinity 文件（应有 1 个）："
+        warn "发现 $aff_count 个 affinity 文件（仅在 cc-connect/references/ 下保留）："
         find "$HOME" \( -name "affinity.json" -o -name "affinity-*.json" \) -type f 2>/dev/null | while read -r f; do
             echo "    $f"
         done
@@ -356,12 +356,17 @@ step_claude_fast() {
 step_claude_wrapper() {
     section "Step 5: 创建 /usr/bin/claude 包装器"
 
-    if step_done "claude_wrapper" && [ -x "$TERMUX_USR/bin/claude" ]; then
-        skip "claude 包装器已创建"
+    if step_done "claude_wrapper" && [ -x "$TERMUX_USR/bin/claude" ] \
+       && grep -q "# cc-wrapper-v3" "$TERMUX_USR/bin/claude" 2>/dev/null; then
+        skip "claude 包装器已创建（版本一致）"
         return
     fi
     if step_done "claude_wrapper"; then
-        warn "状态文件记录已部署，但 claude 包装器缺失，重新创建..."
+        if [ -x "$TERMUX_USR/bin/claude" ] && ! grep -q "# cc-wrapper-v3" "$TERMUX_USR/bin/claude" 2>/dev/null; then
+            warn "repo 已更新（包装器模板版本升级），重新创建..."
+        else
+            warn "状态文件记录已部署，但 claude 包装器缺失，重新创建..."
+        fi
         sed -i '/claude_wrapper/d' "$STATE_FILE" 2>/dev/null || true
     fi
 
@@ -370,6 +375,7 @@ step_claude_wrapper() {
     cat > "$wrapper" << 'WRAPPER_EOF'
 #!/data/data/com.termux/files/usr/bin/sh
 exec /usr/bin/node /home/bin/claude-fast.js "$@"
+# cc-wrapper-v3
 WRAPPER_EOF
     chmod +x "$wrapper"
 
@@ -541,6 +547,7 @@ step_apikey() {
 #!/data/data/com.termux/files/usr/bin/sh
 export ANTHROPIC_API_KEY="$existing_val"
 exec /usr/bin/node /home/bin/claude-fast.js "\$@"
+# cc-wrapper-v3
 WRAPPER_EOF
                 chmod +x "$TERMUX_USR/bin/claude"
                 ok "claude 包装器已修复"
@@ -570,6 +577,7 @@ WRAPPER_EOF
 #!/data/data/com.termux/files/usr/bin/sh
 export ANTHROPIC_API_KEY="$existing_val"
 exec /usr/bin/node /home/bin/claude-fast.js "\$@"
+# cc-wrapper-v3
 WRAPPER_EOF
         chmod +x "$wrapper"
         mark_done "api_key_bashrc"
@@ -599,6 +607,7 @@ WRAPPER_EOF
 #!/data/data/com.termux/files/usr/bin/sh
 export ANTHROPIC_API_KEY="$key"
 exec /usr/bin/node /home/bin/claude-fast.js "\$@"
+# cc-wrapper-v3
 WRAPPER_EOF
         chmod +x "$wrapper"
         ok "包装器已注入 API Key: $wrapper"
@@ -693,12 +702,27 @@ step_wechat() {
 step_startup() {
     section "Step 10: 部署启动脚本"
 
-    if step_done "start_script" && [ -f "$HOME/start-nene.sh" ]; then
-        skip "启动脚本已部署"
+    # 用 md5 判断是否需要更新（同 step_personality / step_claude_fast 模式）
+    local startup_src="$REPO_DIR/scripts/start-bot.sh"
+    local startup_dst="$HOME/start-nene.sh"
+    local startup_unchanged=false
+    if [ -f "$startup_src" ] && [ -f "$startup_dst" ]; then
+        local src_md5 dst_md5
+        src_md5=$(md5sum "$startup_src" | cut -d' ' -f1)
+        dst_md5=$(md5sum "$startup_dst" | cut -d' ' -f1)
+        [ "$src_md5" = "$dst_md5" ] && startup_unchanged=true
+    fi
+
+    if step_done "start_script" && [ -f "$startup_dst" ] && $startup_unchanged; then
+        skip "启动脚本已部署（内容一致）"
         return
     fi
     if step_done "start_script"; then
-        warn "状态文件记录已部署，但 start-nene.sh 缺失，重新部署..."
+        if ! $startup_unchanged; then
+            warn "repo 已更新，重新部署启动脚本..."
+        else
+            warn "状态文件记录已部署，但 start-nene.sh 缺失，重新部署..."
+        fi
         sed -i '/start_script/d' "$STATE_FILE" 2>/dev/null || true
     fi
 
@@ -780,6 +804,14 @@ step_launch() {
     else
         err "bot 启动失败，查看日志：cat $log_file"
     fi
+
+    echo ""
+    echo "  ──────────────────────────────"
+    echo "  提示：日常重启 bot 请执行："
+    echo "    pkill -f cc-connect"
+    echo "    rm -f ~/.cc-connect/.config.toml.lock"
+    echo "    bash ~/start-nene.sh"
+    echo "  ──────────────────────────────"
 }
 
 # ============================================================

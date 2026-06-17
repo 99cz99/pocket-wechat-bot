@@ -81,6 +81,9 @@ if ($phoneHash -eq $currentHash) {
     Remove-Item $Tgz -ErrorAction SilentlyContinue
     # 清理手机 /sdcard/Download/ 的中转文件
     adb shell rm -rf /sdcard/Download/pocket-wechat-bot 2>$null
+    # 同时清理 /sdcard/ 根目录的旧部署残留（历史遗留）
+    adb shell rm -f /sdcard/CLAUDE*.md /sdcard/claude-fast*.js /sdcard/claude-wrapper* 2>$null
+    adb shell rm -f /sdcard/fix-openid.sh /sdcard/fix-claude.sh /sdcard/cw-fixed.sh /sdcard/start-nene*.sh 2>$null
 
     # 验证
     if (Test-Termux "test -f $PhoneRepo/scripts/setup-phone.sh") {
@@ -101,7 +104,15 @@ Write-Host "[OK] claude-fast.js 已同步" -ForegroundColor Green
 Invoke-Termux "cp $PhoneRepo/scripts/start-bot.sh /data/data/com.termux/files/home/start-nene.sh && chmod +x /data/data/com.termux/files/home/start-nene.sh" | Out-Null
 Write-Host "[OK] start-nene.sh 已同步" -ForegroundColor Green
 # CLAUDE.md 和 skills：bot 读取的人格文件
-Invoke-Termux "cp $PhoneRepo/CLAUDE.md /data/data/com.termux/files/home/cc-connect/CLAUDE.md" | Out-Null
+# 先提取手机端当前 CLAUDE.md 中的真实 OpenID，避免被 repo 模板中的占位符覆盖
+$openid = (Invoke-Termux "grep -oP '[a-zA-Z0-9_-]+@im\.wechat' /data/data/com.termux/files/home/cc-connect/CLAUDE.md 2>/dev/null | head -1").Trim()
+if ($openid -and ($openid -match '@im\.wechat')) {
+    Invoke-Termux "cp $PhoneRepo/CLAUDE.md /data/data/com.termux/files/home/cc-connect/CLAUDE.md && sed -i 's/<YOUR_WECHAT_OPENID>/$openid/' /data/data/com.termux/files/home/cc-connect/CLAUDE.md" | Out-Null
+    Write-Host "[OK] CLAUDE.md 已同步（OpenID 已保留）" -ForegroundColor Green
+} else {
+    Invoke-Termux "cp $PhoneRepo/CLAUDE.md /data/data/com.termux/files/home/cc-connect/CLAUDE.md" | Out-Null
+    Write-Host "[OK] CLAUDE.md 已同步（未检测到 OpenID，请运行 fix-openid.sh）" -ForegroundColor Yellow
+}
 if (Test-Termux "test -d $PhoneRepo/skills/nene") {
     Invoke-Termux "mkdir -p /data/data/com.termux/files/home/skills/nene && cp -r $PhoneRepo/skills/nene/* /data/data/com.termux/files/home/skills/nene/" | Out-Null
 }
@@ -128,5 +139,11 @@ Write-Host ""
 Write-Host "============================================="
 Write-Host "  更新完成"
 Write-Host "============================================="
+Write-Host ""
+Write-Host "  提示：日常重启 bot 请在 Termux 执行："
+Write-Host "    pkill -f cc-connect"
+Write-Host "    rm -f ~/.cc-connect/.config.toml.lock"
+Write-Host "    bash ~/start-nene.sh"
+Write-Host ""
 Write-Host ""
 Pause
