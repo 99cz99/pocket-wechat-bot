@@ -732,8 +732,15 @@ Write-Host ""
 Write-Host "  --- 状态检查 ---"
 Write-Host ""
 
+# 全部向手机直接查询，不依赖前面步骤的变量（更新模式下前面步骤可能被跳过）
+$apiKeyOk   = Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/home/.bashrc"
+$configOk   = -not (Test-Termux "grep -q '<YOUR_' /data/data/com.termux/files/home/.cc-connect/config.toml 2>/dev/null")
+$wechatOk   = -not (Test-Termux "grep -q '<YOUR_BOT_TOKEN>' /data/data/com.termux/files/home/.cc-connect/config.toml")
+$openidOk   = Test-Termux "test -f /data/data/com.termux/files/home/cc-connect/CLAUDE.md && ! grep -q '<YOUR_WECHAT_OPENID>' /data/data/com.termux/files/home/cc-connect/CLAUDE.md"
+$running    = Test-Termux "pgrep -f cc-connect"
+
 # API Key
-if (Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/home/.bashrc") {
+if ($apiKeyOk) {
     Write-OK "API Key         已设置"
 } else {
     Write-Fail "API Key         未设置"
@@ -741,9 +748,7 @@ if (Test-Termux "grep -q 'ANTHROPIC_API_KEY=sk-' /data/data/com.termux/files/hom
 }
 
 # config.toml
-$rem = Invoke-Termux "grep -c '<YOUR_' /data/data/com.termux/files/home/.cc-connect/config.toml 2>/dev/null || echo 0"
-$remVal = if ($rem) { $rem.Trim() } else { "0" }
-if ($remVal -eq "0") {
+if ($configOk) {
     Write-OK "config.toml     已填写完整"
 } else {
     Write-Fail "config.toml     还有占位符"
@@ -751,7 +756,7 @@ if ($remVal -eq "0") {
 }
 
 # 微信凭据
-if (-not (Test-Termux "grep -q '<YOUR_BOT_TOKEN>' /data/data/com.termux/files/home/.cc-connect/config.toml")) {
+if ($wechatOk) {
     Write-OK "微信凭据        已配置"
 } else {
     Write-Fail "微信凭据        未配置"
@@ -789,7 +794,7 @@ Write-Host "  管理面板:  http://127.0.0.1:9820"
 Write-Host "  重新部署:  再次右键运行本脚本（已完成的步骤自动跳过）"
 Write-Host ""
 
-$allGood = $apiKeySet -and ($remVal -eq "0") -and $tokenOk -and $openidOk -and $running
+$allGood = $apiKeyOk -and $configOk -and $wechatOk -and $openidOk -and $running
 if ($allGood) {
     Write-Host "=============================================" -ForegroundColor Green
     Write-Host "  全部就绪！微信给 Bot 发条消息试试吧~" -ForegroundColor Green
