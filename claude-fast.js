@@ -218,7 +218,7 @@ function executeTool(name, args) {
 function updateAffinityAuto() {
   const affPath = path.join(WORK_DIR, 'references/affinity-' + personality + '.json');
   try {
-    let aff = { trust_value: 0, last_session: '', notes: '' };
+    let aff = { trust_value: 0, trust_level: 0, corruption_value: 0, corruption_level: 0, last_session: '', notes: '' };
     if (fs.existsSync(affPath)) {
       aff = JSON.parse(fs.readFileSync(affPath, 'utf-8'));
     }
@@ -226,7 +226,7 @@ function updateAffinityAuto() {
     if (!aff.notes) aff.notes = '对话中';
     fs.writeFileSync(affPath, JSON.stringify(aff, null, 2), 'utf-8');
     fs.appendFileSync(path.join(WORK_DIR, 'bot-debug.log'),
-      new Date().toISOString() + ' autoUpdate: trust=' + (aff.trust_value ?? aff.trust ?? 0) + '\n');
+      new Date().toISOString() + ' autoUpdate: trust=' + (aff.trust_value ?? aff.trust ?? 0) + ' corrupt=' + (aff.corruption_value ?? 0) + '\n');
   } catch (e) {
     process.stderr.write('claude-fast: autoUpdate affinity failed: ' + e.message + '\n');
   }
@@ -473,6 +473,16 @@ function buildSystemPrompt(basePrompt) {
         else if (trustVal >= 10) trustLv = 1;
         else trustLv = 0;
       }
+      const corruptionVal = aff.corruption_value ?? 0;
+      let corruptionLv = aff.corruption_level ?? 0;
+      if (!aff.corruption_level) {
+        if (corruptionVal >= 90) corruptionLv = 5;
+        else if (corruptionVal >= 70) corruptionLv = 4;
+        else if (corruptionVal >= 50) corruptionLv = 3;
+        else if (corruptionVal >= 30) corruptionLv = 2;
+        else if (corruptionVal >= 15) corruptionLv = 1;
+        else corruptionLv = 0;
+      }
       const mem = [
         "",
         "<!-- SESSION_MEMORY -->",
@@ -480,9 +490,10 @@ function buildSystemPrompt(basePrompt) {
         "- 上次对话日期: " + (aff.last_session || "未知"),
         "- 上次值得记住的事: " + notes,
         "- 信任值: " + trustVal + "（Lv" + trustLv + "）",
+        "- 堕落度: " + corruptionVal + "（Lv" + corruptionLv + "，只升不降）",
         "上述信息由上次对话结束后自动保存。请自然地参考这些记忆——",
         "如果新对话内容与上次相关，可以顺口提及；如果不相关，不必生硬地提。",
-        "除非信任阶梯规则要求，否则不要直接说出信任数字。",
+        "除非信任阶梯规则要求，否则不要直接说出信任/堕落度数字。",
         ""
       ].join("\n");
       prompt += mem;
@@ -494,13 +505,15 @@ function buildSystemPrompt(basePrompt) {
         "- `notes`: 用一两句话记录本轮对话中最值得记住的内容。如果对话很短或只是闲聊，写一句简短概括即可，不要留空。",
         "- `trust_value`: 如果信任有变化则更新数字，无变化则保持不变",
         "- `trust_level`: 如果跨越了层级边界则更新，否则保持不变",
+        "- `corruption_value`: 如果堕落度有变化则更新数字，无变化则保持不变（注意：堕落度只升不降）",
+        "- `corruption_level`: 如果跨越了堕落度档位边界则更新，否则保持不变",
         "如果你不理解这个规则或不知道如何操作，请说明。",
         ""
       ].join("\n");
-      process.stderr.write("claude-fast: injected session memory (trust=" + trustVal + ", Lv" + trustLv + ")\n");
+      process.stderr.write("claude-fast: injected session memory (trust=" + trustVal + " Lv" + trustLv + ", corrupt=" + corruptionVal + " Lv" + corruptionLv + ")\n");
       process.stderr.write("claude-fast: affinity path=" + affPath + " raw=" + JSON.stringify(aff) + "\n");
       fs.appendFileSync(path.join(WORK_DIR, "bot-debug.log"),
-        new Date().toISOString() + " injected: trust=" + trustVal + " Lv" + trustLv + " path=" + affPath + " raw=" + JSON.stringify(aff) + "\n");
+        new Date().toISOString() + " injected: trust=" + trustVal + " Lv" + trustLv + " corrupt=" + corruptionVal + " Lv" + corruptionLv + " path=" + affPath + " raw=" + JSON.stringify(aff) + "\n");
     } catch(e2) {
       process.stderr.write("claude-fast: failed to parse affinity file: " + e2.message + "\n");
     }
