@@ -154,6 +154,7 @@ cleanup_duplicates() {
         check_path "$HOME/cc-connect/CLAUDE.md"
         check_path "$HOME/cc-connect/references"
         check_path "$HOME/skills/nene/SKILL.md"
+        check_path "$HOME/skills/meguru/SKILL.md"
         check_path "$HOME/bin/claude-fast.js"
         check_path "$TERMUX_USR/bin/claude"
         check_path "$HOME/.cc-connect/config.toml"
@@ -407,22 +408,32 @@ step_personality() {
     fi
 
     # 检测 skills/nene/ 目录是否变更（全目录联合 md5，而非只看 SKILL.md）
-    local skills_unchanged=false
+    local skills_nene_unchanged=false
     if [ -d "$REPO_DIR/skills/nene" ] && [ -d "$HOME/skills/nene" ]; then
-        local repo_skills_md5 run_skills_md5
-        repo_skills_md5=$(find "$REPO_DIR/skills/nene" -type f | sort | xargs md5sum | md5sum | cut -d' ' -f1)
-        run_skills_md5=$(find "$HOME/skills/nene" -type f | sort | xargs md5sum | md5sum | cut -d' ' -f1)
-        [ "$repo_skills_md5" = "$run_skills_md5" ] && skills_unchanged=true
+        local repo_nene_md5 run_nene_md5
+        repo_nene_md5=$(find "$REPO_DIR/skills/nene" -type f | sort | xargs md5sum | md5sum | cut -d' ' -f1)
+        run_nene_md5=$(find "$HOME/skills/nene" -type f | sort | xargs md5sum | md5sum | cut -d' ' -f1)
+        [ "$repo_nene_md5" = "$run_nene_md5" ] && skills_nene_unchanged=true
     fi
 
-    if step_done "personality_files" && $claude_unchanged && $skills_unchanged; then
+    # 检测 skills/meguru/ 目录是否变更
+    local skills_meguru_unchanged=false
+    if [ -d "$REPO_DIR/skills/meguru" ] && [ -d "$HOME/skills/meguru" ]; then
+        local repo_meguru_md5 run_meguru_md5
+        repo_meguru_md5=$(find "$REPO_DIR/skills/meguru" -type f | sort | xargs md5sum | md5sum | cut -d' ' -f1)
+        run_meguru_md5=$(find "$HOME/skills/meguru" -type f | sort | xargs md5sum | md5sum | cut -d' ' -f1)
+        [ "$repo_meguru_md5" = "$run_meguru_md5" ] && skills_meguru_unchanged=true
+    fi
+
+    if step_done "personality_files" && $claude_unchanged && $skills_nene_unchanged && $skills_meguru_unchanged; then
         skip "人格文件已部署（内容一致）"
         return
     fi
     if step_done "personality_files"; then
         local reasons=""
         if ! $claude_unchanged; then reasons="$reasons CLAUDE.md"; fi
-        if ! $skills_unchanged; then reasons="$reasons skills/nene/"; fi
+        if ! $skills_nene_unchanged; then reasons="$reasons skills/nene/"; fi
+        if ! $skills_meguru_unchanged; then reasons="$reasons skills/meguru/"; fi
         if [ -n "$reasons" ]; then
             warn "文件已变更：$reasons，重新部署..."
         else
@@ -453,6 +464,17 @@ step_personality() {
         rm -rf "$HOME/.claude/skills" 2>/dev/null || true
     else
         warn "找不到 skills/nene/ 目录，人格文件未部署"
+    fi
+
+    # skills/meguru/ → ~/skills/meguru/
+    # 注意：scripts/ 是 PC 侧开发工具，不部署到手机
+    if [ -d "$REPO_DIR/skills/meguru" ]; then
+        mkdir -p "$HOME/skills/meguru"
+        cp -r "$REPO_DIR/skills/meguru/"* "$HOME/skills/meguru/"
+        rm -rf "$HOME/skills/meguru/scripts"
+        ok "skills/meguru/ → ~/skills/meguru/"
+    else
+        warn "找不到 skills/meguru/ 目录，人格文件未部署"
     fi
 
     # 提示替换 OpenID
@@ -846,7 +868,8 @@ step_verify() {
         "claude-wrapper:$([ -x "$TERMUX_USR/bin/claude" ] && echo OK || echo MISSING)"
         "CLAUDE.md:$([ -f "$HOME/cc-connect/CLAUDE.md" ] && echo OK || echo MISSING)"
         "config.toml:$([ -f "$HOME/.cc-connect/config.toml" ] && echo OK || echo MISSING)"
-        "skills:$([ -d "$HOME/skills/nene" ] && echo OK || echo MISSING)"
+        "skills (nene):$([ -d "$HOME/skills/nene" ] && echo OK || echo MISSING)"
+        "skills (meguru):$([ -d "$HOME/skills/meguru" ] && echo OK || echo MISSING)"
         "API Key:$([ -n "${ANTHROPIC_API_KEY:-}" ] && echo SET || echo UNSET)"
         "bot running:$(pgrep -f cc-connect >/dev/null 2>&1 && echo YES || echo NO)"
     )

@@ -224,9 +224,11 @@ function updateAffinityAuto() {
     }
     aff.last_session = new Date().toISOString().split('T')[0];
     if (!aff.notes) aff.notes = '对话中';
+    const dir = path.dirname(affPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(affPath, JSON.stringify(aff, null, 2), 'utf-8');
     fs.appendFileSync(path.join(WORK_DIR, 'bot-debug.log'),
-      new Date().toISOString() + ' autoUpdate: trust=' + (aff.trust_value ?? aff.trust ?? 0) + ' corrupt=' + (aff.corruption_value ?? 0) + '\n');
+      new Date().toISOString() + ' autoUpdate: trust=' + (aff.trust_value ?? aff.trust ?? aff.affinity ?? 0) + ' corrupt=' + (aff.corruption_value ?? aff.corruption ?? 0) + '\n');
   } catch (e) {
     process.stderr.write('claude-fast: autoUpdate affinity failed: ' + e.message + '\n');
   }
@@ -462,7 +464,7 @@ function buildSystemPrompt(basePrompt) {
   if (fs.existsSync(affPath)) {
     try {
       const aff = JSON.parse(fs.readFileSync(affPath, "utf-8"));
-      const trustVal = aff.trust_value ?? aff.trust ?? 0;
+      const trustVal = aff.trust_value ?? aff.trust ?? aff.affinity ?? 0;
       const notes = aff.notes || aff.context_summary || "无";
       let trustLv = aff.trust_level ?? 0;
       if (!aff.trust_level) {
@@ -473,7 +475,7 @@ function buildSystemPrompt(basePrompt) {
         else if (trustVal >= 10) trustLv = 1;
         else trustLv = 0;
       }
-      const corruptionVal = aff.corruption_value ?? 0;
+      const corruptionVal = aff.corruption_value ?? aff.corruption ?? 0;
       let corruptionLv = aff.corruption_level ?? 0;
       if (!aff.corruption_level) {
         if (corruptionVal >= 90) corruptionLv = 5;

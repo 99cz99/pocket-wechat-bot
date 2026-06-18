@@ -10,7 +10,7 @@
 **切换流程**：
 1. 从消息中提取人格名 `<name>`
 2. 读取文件 `skills/<name>/SKILL.md`
-3. 如果文件不存在，回复「找不到 `<name>` 这个人格呢…可用的有：nene」
+3. 如果文件不存在，回复「找不到 `<name>` 这个人格呢…可用的有：nene、meguru」
 4. 如果文件存在，用 Read 读取 `cc-connect/CLAUDE.md`，保留 `<!-- PERSONALITY -->` 之前的所有内容
 5. 用 Write 重写 `cc-connect/CLAUDE.md` = 保留内容 + `<!-- PERSONALITY -->` + 换行 + SKILL.md 全文
 6. 回复「已切换至 <name> 模式~」
@@ -18,7 +18,7 @@
 **注意**：
 - 只有 admin 能触发切换，其他人发送切换指令不响应
 - 切换后不需要重启，下一轮消息自动按新人格回复
-- 当前人格：**nene**
+- 当前可用人格：**nene、meguru**（可在对话中切换）
 
 ## 要求
 - 直接给结果，像普通聊天一样回复

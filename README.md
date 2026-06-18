@@ -14,7 +14,7 @@
                                claude-fast.js → DeepSeek API
                                      ↓
                                CLAUDE.md (人格定义)
-                               skills/nene/ (角色数据)
+                               skills/nene/ + skills/meguru/ (角色数据)
 ```
 
 ---
@@ -197,6 +197,7 @@ bash ~/start-nene.sh
 | 人格 | 目录 | 说明 |
 |------|------|------|
 | **宁宁（nene）** | `skills/nene/` | 绫地宁宁，出自柚子社《魔女的夜宴》。7 个核心人格模型、完整表达 DNA、六层信任阶梯 |
+| **巡（meguru）** | `skills/meguru/` | 因幡巡，出自柚子社《魔女的夜宴》。6 个核心人格模型、完整表达 DNA、元气系学妹 |
 
 **角色介绍页**：[在线预览](https://99cz99.github.io/pocket-wechat-bot/nene-skill-intro.html) · [本地](docs/nene-skill-intro.html)
 

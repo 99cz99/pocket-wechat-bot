@@ -372,6 +372,13 @@ if (Test-Termux "test -d $PhoneRepo/skills/nene") {
     Write-OK "skills/nene/ 已同步"
 }
 
+# skills/meguru/：AI Read 工具读取的人格参考文件
+# 注意：scripts/ 是 PC 侧开发工具，不部署到手机
+if (Test-Termux "test -d $PhoneRepo/skills/meguru") {
+    Invoke-Termux "mkdir -p /data/data/com.termux/files/home/skills/meguru && cp -r $PhoneRepo/skills/meguru/* /data/data/com.termux/files/home/skills/meguru/ && rm -rf /data/data/com.termux/files/home/skills/meguru/scripts" | Out-Null
+    Write-OK "skills/meguru/ 已同步"
+}
+
 # ============================================================
 # 步骤 4: 基础环境安装（仅首次部署）
 # ============================================================

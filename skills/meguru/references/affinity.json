@@ -1,0 +1,16 @@
+{
+  "trust_value": 3,
+  "trust_level": 0,
+  "corruption_value": 0,
+  "corruption_level": 0,
+  "last_session": "2026-06-19",
+  "total_h_scenes_completed": 0,
+  "corruption_milestones": {
+    "lv1_reached": false,
+    "lv2_reached": false,
+    "lv3_reached": false,
+    "lv4_reached": false,
+    "lv5_reached": false
+  },
+  "notes": ""
+}

@@ -1,5 +1,6 @@
 # 运行时状态文件（按人格隔离，新格式 affinity-nene.json 等）
 **/affinity.json
+!skills/*/references/affinity.json
 **/affinity-*.json
 
 # 用户配置
