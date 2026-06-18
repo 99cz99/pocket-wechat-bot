@@ -443,9 +443,11 @@ step_personality() {
     fi
 
     # skills/nene/ → ~/skills/nene/（AI Read 工具从此路径读取）
+    # 注意：scripts/ 是 PC 侧开发工具，不部署到手机
     if [ -d "$REPO_DIR/skills/nene" ]; then
         mkdir -p "$HOME/skills/nene"
         cp -r "$REPO_DIR/skills/nene/"* "$HOME/skills/nene/"
+        rm -rf "$HOME/skills/nene/scripts"
         ok "skills/nene/ → ~/skills/nene/"
         # 清理旧的多余路径（以前部署会复制多份）
         rm -rf "$HOME/.claude/skills" 2>/dev/null || true

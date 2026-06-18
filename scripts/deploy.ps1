@@ -366,8 +366,9 @@ if ($openid -and ($openid -match '@im\.wechat')) {
 }
 
 # skills/nene/：AI Read 工具读取的人格参考文件
+# 注意：scripts/ 是 PC 侧开发工具，不部署到手机
 if (Test-Termux "test -d $PhoneRepo/skills/nene") {
-    Invoke-Termux "mkdir -p /data/data/com.termux/files/home/skills/nene && cp -r $PhoneRepo/skills/nene/* /data/data/com.termux/files/home/skills/nene/" | Out-Null
+    Invoke-Termux "mkdir -p /data/data/com.termux/files/home/skills/nene && cp -r $PhoneRepo/skills/nene/* /data/data/com.termux/files/home/skills/nene/ && rm -rf /data/data/com.termux/files/home/skills/nene/scripts" | Out-Null
     Write-OK "skills/nene/ 已同步"
 }
 
