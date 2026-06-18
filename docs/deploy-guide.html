@@ -178,6 +178,13 @@
     .step-header { padding: 14px 16px; }
     pre { font-size: 0.78em; padding: 12px 14px; }
     .method-bar { width: 100%; }
+    .select-card { min-width: 0; flex: 1 1 100%; }
+    .arch-box { font-size: 0.78em; padding: 8px 12px; }
+    .arch-arrow { font-size: 1em; }
+    .final-tree { font-size: 0.75em; padding: 16px; }
+    .badge-row { gap: 6px; }
+    .badge { font-size: 0.7em; padding: 3px 10px; }
+    .step-num { width: 30px; height: 30px; font-size: 0.85em; }
   }
 </style>
 </head>
@@ -1013,8 +1020,8 @@ adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"
       <span class="step-title">大文件 CLAUDE.md 拉低首次响应速度</span>
     </div>
     <div class="step-body">
-      <p>完整 CLAUDE.md 约 70KB，首次消息需等待 10-30 秒（加载 system prompt + API 首响应）。后续消息因为上下文复用会快很多（3-10 秒），但如果对话太长导致历史被裁剪，下次又会慢。</p>
-      <p><strong>应对：</strong>精简 CLAUDE.md 到 5-10KB，只保留核心规则。人格细节可以写在外部文件让 AI 自行读取。</p>
+      <p>完整 CLAUDE.md 约 40,000 字符（Claude Code 上下文硬限制），首次消息需等待 10-30 秒（加载 system prompt + API 首响应）。后续消息因为上下文复用会快很多（3-10 秒），但如果对话太长导致历史被裁剪，下次又会慢。</p>
+      <p><strong>应对：</strong>CLAUDE.md 有 40,000 字符硬上限（超限不被完整加载）。如需精简，优先砍元信息/免责声明段落，保留核心人设规则。人格细节可写在外部文件让 AI 自行读取。</p>
     </div>
   </div>
 
@@ -1044,7 +1051,7 @@ adb shell "run-as com.termux sh -c 'pkill -f cc-connect; sleep 1'"
 <div style="text-align:center;padding:40px 0 20px;color:#505068;font-size:0.82em">
   <p>cc-connect 微信机器人 · 部署教程</p>
   <p>仓库地址：<a href="https://github.com/99cz99/pocket-wechat-bot" style="color:#6060a0">github.com/99cz99/pocket-wechat-bot</a></p>
-  <p style="margin-top:8px">更新时间：2026-06-15</p>
+  <p style="margin-top:8px">更新时间：2026-06-18</p>
 </div>
 
 </div><!-- .main -->

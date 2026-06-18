@@ -239,5 +239,5 @@ adb push file //sdcard//Download//file
 
 1. **非 PIE 二进制修补**：仅修改 ELF e_type，未处理可能的位置相关代码。在 ARM64 上因 PC-relative 寻址自然兼容，x86 上不可行。
 2. **Claude Code 版本更新**：npm 包升级后需重新下载原生包并修补。
-3. **性能**：双层 proot + ARM CPU + 大型 CLAUDE.md（46KB），首次消息响应较慢（30-60s），后续消息因 session 复用会显著加快。
+3. **性能**：双层 proot + ARM CPU + 大型 CLAUDE.md（约 40,000 字符），首次消息响应较慢（30-60s），后续消息因 session 复用会显著加快。
 4. **TLS 对齐**：未修改。Android 内核在加载 glibc 链接的 DYN 二进制时未触发该检查（仅在 Bionic linker 路径触发）。
