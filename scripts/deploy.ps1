@@ -556,10 +556,38 @@ if ($tokenOk) {
     # DNS 预检：Go 在 Android 走 netd 而非 /etc/resolv.conf，提前修复
     Write-Info "检查 proot DNS..."
     $dnsOk = Test-Termux "timeout 3 /data/data/com.termux/files/usr/bin/nslookup ilinkai.weixin.qq.com 114.114.114.114 >/dev/null 2>&1"
+    # 确保 DNS 配置存在（Android 11+ Termux 可能无权限写 /data/local/tmp/）
+    # 第一层：Invoke-Termux（run-as，大多数情况 OK）
+    # 第二层：adb shell 直接写（shell 用户有 /data/local/tmp/ 写权限）
+    # 第三层：fallback 到 ~/proot-fs/etc/（Termux 自己的目录，一定有权限）
+    $dnsFixed = $false
+    Invoke-Termux "echo 'nameserver 114.114.114.114' > /data/local/tmp/resolv.conf 2>/dev/null; echo 'nameserver 223.5.5.5' >> /data/local/tmp/resolv.conf 2>/dev/null" | Out-Null
+    if (Test-Termux "test -s /data/local/tmp/resolv.conf") {
+        Write-OK "DNS 已写入 /data/local/tmp/resolv.conf（run-as）"
+        $dnsFixed = $true
+    } else {
+        Write-Warn "run-as 无权限写 /data/local/tmp/，尝试 adb shell..."
+        adb shell "echo 'nameserver 114.114.114.114' > /data/local/tmp/resolv.conf; echo 'nameserver 223.5.5.5' >> /data/local/tmp/resolv.conf" 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-OK "DNS 已写入 /data/local/tmp/resolv.conf（adb shell）"
+            $dnsFixed = $true
+        } else {
+            Write-Warn "adb shell 也失败，fallback 到 ~/proot-fs/etc/"
+            Invoke-Termux "mkdir -p /data/data/com.termux/files/home/proot-fs/etc; echo 'nameserver 114.114.114.114' > /data/data/com.termux/files/home/proot-fs/etc/resolv.conf; echo 'nameserver 223.5.5.5' >> /data/data/com.termux/files/home/proot-fs/etc/resolv.conf" | Out-Null
+            if (Test-Termux "test -s /data/data/com.termux/files/home/proot-fs/etc/resolv.conf") {
+                Write-OK "DNS 已写入 fallback 路径 ~/proot-fs/etc/resolv.conf"
+                $dnsFixed = $true
+            }
+        }
+    }
+
+    # 同步到 proot-fs（后续 proot bind 可能用到）
+    if ($dnsFixed) {
+        Invoke-Termux "mkdir -p /data/data/com.termux/files/home/proot-fs/etc; cat /data/local/tmp/resolv.conf > /data/data/com.termux/files/home/proot-fs/etc/resolv.conf 2>/dev/null || true" | Out-Null
+    }
+
     if (-not $dnsOk) {
-        Write-Warn "DNS 可能异常，正在修复..."
-        Invoke-Termux "echo 'nameserver 114.114.114.114' > /data/local/tmp/resolv.conf 2>/dev/null; echo 'nameserver 223.5.5.5' >> /data/local/tmp/resolv.conf 2>/dev/null; mkdir -p /data/data/com.termux/files/home/proot-fs/etc; cp /data/local/tmp/resolv.conf /data/data/com.termux/files/home/proot-fs/etc/resolv.conf 2>/dev/null || true" | Out-Null
-        Write-OK "DNS 已修复（114.114.114.114 / 223.5.5.5）"
+        Write-Warn "DNS 检测异常，但配置已写入"
     } else {
         Write-OK "DNS 正常"
     }
@@ -578,15 +606,23 @@ if [ ! -d ~/proot-fs/etc/ssl ] || [ -z "$(ls -A ~/proot-fs/etc/ssl 2>/dev/null)"
         echo "[!] 警告：未找到 TLS 证书，请运行: pkg install ca-certificates -y"
     fi
 fi
-# 确保 DNS 配置存在
-if [ ! -s /data/local/tmp/resolv.conf ]; then
+# 确保 DNS 配置存在（优先全局路径，无权限则 fallback）
+RESOLV_CONF="/data/local/tmp/resolv.conf"
+if [ ! -s "$RESOLV_CONF" ]; then
     echo "[*] 写入 DNS 配置..."
-    echo "nameserver 114.114.114.114" > /data/local/tmp/resolv.conf 2>/dev/null
-    echo "nameserver 223.5.5.5" >> /data/local/tmp/resolv.conf 2>/dev/null
+    echo "nameserver 114.114.114.114" > "$RESOLV_CONF" 2>/dev/null && \
+    echo "nameserver 223.5.5.5" >> "$RESOLV_CONF" 2>/dev/null
+fi
+if [ ! -s "$RESOLV_CONF" ]; then
+    echo "[*] 无权限写 /data/local/tmp/，fallback 到 ~/proot-fs/etc/"
+    RESOLV_CONF="$HOME/proot-fs/etc/resolv.conf"
+    mkdir -p "$(dirname "$RESOLV_CONF")"
+    echo "nameserver 114.114.114.114" > "$RESOLV_CONF"
+    echo "nameserver 223.5.5.5" >> "$RESOLV_CONF"
 fi
 echo "正在获取微信登录二维码..."
 proot \
-  -b /data/local/tmp/resolv.conf:/etc/resolv.conf \
+  -b "$RESOLV_CONF":/etc/resolv.conf \
   -b ~/proot-fs/etc/ssl:/etc/ssl \
   -b /data/data/com.termux/files/usr:/usr \
   -b ~/:/home \

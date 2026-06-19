@@ -40,6 +40,20 @@ fi
 TERMUX_USR="/data/data/com.termux/files/usr"
 TERMUX_HOME="/data/data/com.termux/files/home"
 
+# ---- DNS helper ----
+# Android 11+ Termux 可能无权限写 /data/local/tmp/resolv.conf
+# 返回可用的 proot -b 参数
+get_resolv_bind() {
+    if [ -s "/data/local/tmp/resolv.conf" ]; then
+        echo "-b /data/local/tmp/resolv.conf:/etc/resolv.conf"
+    elif [ -s "$HOME/proot-fs/etc/resolv.conf" ]; then
+        echo "-b $HOME/proot-fs/etc/resolv.conf:/etc/resolv.conf"
+    else
+        # 都不存在，默认返回全局路径（让 proot 自己报错）
+        echo "-b /data/local/tmp/resolv.conf:/etc/resolv.conf"
+    fi
+}
+
 # ---- 状态管理 ----
 step_done() { grep -qxF "$1" "$STATE_FILE" 2>/dev/null; }
 # 返回 0=已完成（grep 找到），非0=未完成（grep 未找到或文件不存在）
@@ -282,20 +296,27 @@ step_proot() {
 
     # DNS（start-bot.sh 会自动处理，这里预创建避免首次启动失败）
     local resolv="/data/local/tmp/resolv.conf"
-    if [ ! -s "$resolv" ]; then
-        info "写入 DNS 配置..."
-        echo "nameserver 114.114.114.114" > "$resolv" 2>/dev/null || {
-            warn "无法写入 $resolv（Android 11+ 权限限制）"
-            warn "start-bot.sh 启动时会自动尝试写入"
-        }
-        echo "nameserver 223.5.5.5" >> "$resolv" 2>/dev/null || true
-        ok "DNS 配置已写入"
+    if [ -s "$resolv" ]; then
+        ok "DNS 配置已存在: $resolv"
     else
-        ok "DNS 配置已存在"
+        info "写入 DNS 配置..."
+        echo "nameserver 114.114.114.114" > "$resolv" 2>/dev/null && \
+        echo "nameserver 223.5.5.5" >> "$resolv" 2>/dev/null
+        if [ -s "$resolv" ]; then
+            ok "DNS 配置已写入 $resolv"
+        else
+            warn "无法写入 $resolv（Android 11+ 权限限制）"
+            info "fallback 到 ~/proot-fs/etc/resolv.conf"
+            mkdir -p "$HOME/proot-fs/etc"
+            { echo "nameserver 114.114.114.114"; echo "nameserver 223.5.5.5"; } > "$HOME/proot-fs/etc/resolv.conf"
+            ok "DNS 已写入 fallback 路径"
+        fi
     fi
-    # 同时写入 proot-fs 供 GODEBUG=netdns=go 使用
+    # 确保 proot-fs 也有副本（供 GODEBUG=netdns=go 使用）
     mkdir -p "$HOME/proot-fs/etc"
-    cp "$resolv" "$HOME/proot-fs/etc/resolv.conf" 2>/dev/null || true
+    if [ -s "$resolv" ]; then
+        cp "$resolv" "$HOME/proot-fs/etc/resolv.conf" 2>/dev/null || true
+    fi
 
     mark_done "proot_env"
     ok "proot 环境配置完成"
@@ -685,7 +706,7 @@ step_wechat() {
 
     if [ "$NONINTERACTIVE" = "1" ]; then
         warn "未获取微信凭据，请稍后在手机 Termux 中手动执行："
-        echo "     proot -b /data/local/tmp/resolv.conf:/etc/resolv.conf -b ~/proot-fs/etc/ssl:/etc/ssl -b /data/data/com.termux/files/usr:/usr -b ~/:/home /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin ~/bin/cc-connect weixin setup --project nene"
+        echo "     proot $(get_resolv_bind) -b ~/proot-fs/etc/ssl:/etc/ssl -b /data/data/com.termux/files/usr:/usr -b ~/:/home /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin ~/bin/cc-connect weixin setup --project nene"
         echo "     扫码后 token 和 account_id 会自动填入 config.toml"
         return
     fi
@@ -701,7 +722,7 @@ step_wechat() {
     echo ""
     info "正在获取微信凭据（请在手机上扫码）..."
     local setup_output
-    setup_output=$(proot -b /data/local/tmp/resolv.conf:/etc/resolv.conf -b "$HOME/proot-fs/etc/ssl:/etc/ssl" -b /data/data/com.termux/files/usr:/usr -b "$HOME:/home" /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin "$HOME/bin/cc-connect" weixin setup --project nene 2>&1) || true
+    setup_output=$(proot $(get_resolv_bind) -b "$HOME/proot-fs/etc/ssl:/etc/ssl" -b /data/data/com.termux/files/usr:/usr -b "$HOME:/home" /usr/bin/env PATH=/usr/bin:/usr/local/bin:/home/bin "$HOME/bin/cc-connect" weixin setup --project nene 2>&1) || true
     echo "$setup_output"
 
     # 自动解析 token 和 account_id
@@ -769,8 +790,16 @@ step_startup() {
 #!/data/data/com.termux/files/usr/bin/bash
 export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:?请先设置 ANTHROPIC_API_KEY}"
 SSL_CERT_FILE=/data/data/com.termux/files/usr/etc/tls/cert.pem
+# DNS: 优先全局路径，无权限则 fallback
+RESOLV_BIND="-b /data/local/tmp/resolv.conf:/etc/resolv.conf"
+if [ ! -s /data/local/tmp/resolv.conf ]; then
+    mkdir -p $HOME/proot-fs/etc
+    echo "nameserver 114.114.114.114" > $HOME/proot-fs/etc/resolv.conf
+    echo "nameserver 223.5.5.5" >> $HOME/proot-fs/etc/resolv.conf
+    RESOLV_BIND="-b $HOME/proot-fs/etc/resolv.conf:/etc/resolv.conf"
+fi
 exec proot \
-  -b /data/local/tmp/resolv.conf:/etc/resolv.conf \
+  $RESOLV_BIND \
   -b $HOME/proot-fs/etc/ssl:/etc/ssl \
   -b /data/data/com.termux/files/usr:/usr \
   -b $HOME:/home \

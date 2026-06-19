@@ -24,16 +24,37 @@ fi
 # DNS 修复：Android 不走 /etc/resolv.conf，Go 二进制需要它
 # DNS 值与此仓库 scripts/termux-resolv.conf 模板保持同步；海外用户可改 8.8.8.8 / 1.1.1.1
 RESOLV_CONF="/data/local/tmp/resolv.conf"
-if [ ! -s "$RESOLV_CONF" ]; then
-    echo "[*] 写入 DNS 配置到 $RESOLV_CONF ..."
-    echo "nameserver 114.114.114.114" > "$RESOLV_CONF" 2>/dev/null || {
-        echo "[!] 无法写入 $RESOLV_CONF（Android 11+ 权限限制）"
-        echo "    请在 Termux 里手动执行: echo 'nameserver 114.114.114.114' > /data/local/tmp/resolv.conf"
-        exit 1
-    }
-    echo "nameserver 223.5.5.5" >> "$RESOLV_CONF"
+RESOLV_BIND=""  # proot -b 参数，由 resolve_dns 填充
+
+resolve_dns() {
+    # 已有有效的全局 DNS 文件 → 直接用
+    if [ -s "$RESOLV_CONF" ]; then
+        RESOLV_BIND="-b $RESOLV_CONF:/etc/resolv.conf"
+        return 0
+    fi
+
+    # 尝试写入全局路径
+    echo "nameserver 114.114.114.114" > "$RESOLV_CONF" 2>/dev/null && \
+    echo "nameserver 223.5.5.5" >> "$RESOLV_CONF" 2>/dev/null
+    if [ -s "$RESOLV_CONF" ]; then
+        echo "[*] DNS 已写入 $RESOLV_CONF"
+        RESOLV_BIND="-b $RESOLV_CONF:/etc/resolv.conf"
+        return 0
+    fi
+
+    # Android 11+ 无写权限 → fallback 到 ~/proot-fs/etc/
+    echo "[!] 无权限写 $RESOLV_CONF（Android 11+ 限制），用 fallback 路径"
+    local fb="$HOME/proot-fs/etc/resolv.conf"
+    mkdir -p "$(dirname "$fb")"
+    {
+        echo "nameserver 114.114.114.114"
+        echo "nameserver 223.5.5.5"
+    } > "$fb"
+    RESOLV_BIND="-b $fb:/etc/resolv.conf"
+    echo "[*] DNS 已写入 $fb"
     # 海外用户可将以上 DNS 替换为 8.8.8.8 / 1.1.1.1
-fi
+}
+resolve_dns
 
 # 防止 Android 杀后台
 if command -v termux-wake-lock > /dev/null 2>&1; then
@@ -56,7 +77,7 @@ LOCK="$HOME/.cc-connect/.config.toml.lock"
 if [ -f "$LOCK" ]; then
     echo "[!] 已有实例在运行，先停止..."
     proot \
-      -b /data/local/tmp/resolv.conf:/etc/resolv.conf \
+      $RESOLV_BIND \
       -b $HOME/proot-fs/etc/ssl:/etc/ssl \
       -b /data/data/com.termux/files/usr:/usr \
       -b $HOME:/home \
@@ -93,7 +114,7 @@ fi
 SSL_CERT_FILE=/data/data/com.termux/files/usr/etc/tls/cert.pem \
 GODEBUG=netdns=go \
 proot \
-  -b /data/local/tmp/resolv.conf:/etc/resolv.conf \
+  $RESOLV_BIND \
   -b $HOME/proot-fs/etc/ssl:/etc/ssl \
   -b /data/data/com.termux/files/usr:/usr \
   -b $HOME:/home \
