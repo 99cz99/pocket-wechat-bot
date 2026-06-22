@@ -74,7 +74,7 @@ https://github.com/99cz99/pocket-wechat-bot.git
 | **宁宁（nene）** | `skills/nene/` | 绫地宁宁，出自柚子社《魔女的夜宴》。7 个核心人格模型、完整表达 DNA、六层信任阶梯 |
 | **巡（meguru）** | `skills/meguru/` | 因幡巡，出自柚子社《魔女的夜宴》。6 个核心人格模型、完整表达 DNA、元气系学妹 |
 
-**角色介绍页**：[在线预览](https://99cz99.github.io/pocket-wechat-bot/nene-skill-intro.html) · [本地](docs/nene-skill-intro.html)
+**角色介绍页**：[宁宁](https://99cz99.github.io/pocket-wechat-bot/nene-skill-intro.html) · [巡](https://99cz99.github.io/pocket-wechat-bot/meguru-skill-intro.html) · [本地宁宁](docs/nene-skill-intro.html) · [本地巡](docs/meguru-skill-intro.html)
 
 ### 创作你自己的角色
 
@@ -89,6 +89,7 @@ https://github.com/99cz99/pocket-wechat-bot.git
 | [usage.md](docs/usage.md) | 使用指南 · 命令与交互 |
 | [deploy-from-zero.md](docs/deploy-from-zero.md) | 从零部署完整教程 |
 | [nene-skill-intro.html](docs/nene-skill-intro.html) | 宁宁 Skill 角色介绍 |
+| [meguru-skill-intro.html](docs/meguru-skill-intro.html) | 巡 Skill 角色介绍 |
 | [android-claude-code-fix.md](docs/android-claude-code-fix.md) | Android/Termux 兼容性排障 |
 | [create-your-own-skill.md](docs/create-your-own-skill.md) | 自定义人格创作指南 |
 

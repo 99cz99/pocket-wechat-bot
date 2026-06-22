@@ -1061,6 +1061,78 @@ body {
 @media (max-width: 480px) {
   .btn-top { bottom: 16px; right: 16px; width: 36px; height: 36px; font-size: 16px; }
 }
+
+/* === CHARACTER FLOATING SIDEBAR === */
+.char-float {
+  position: fixed;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 150;
+}
+.char-float-btn {
+  width: 48px; height: 48px;
+  border-radius: 24px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(74,58,110,0.12);
+  transition: transform 0.3s, box-shadow 0.3s;
+  position: relative;
+  border: 2px solid transparent;
+  cursor: pointer;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+.char-float-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 24px rgba(74,58,110,0.2);
+}
+.char-float-btn.nene-btn {
+  background: linear-gradient(135deg, var(--nene-pink), var(--nene-purple));
+  color: #fff;
+}
+.char-float-btn.meguru-btn {
+  background: linear-gradient(135deg, #f9a66c, #e07b3c);
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .char-float {
+    position: fixed;
+    left: 50%; top: auto; bottom: 16px;
+    transform: translateX(-50%);
+    flex-direction: row;
+    gap: 12px;
+    background: rgba(255,255,255,0.92);
+    padding: 8px 16px;
+    border-radius: 24px;
+    box-shadow: 0 4px 20px rgba(74,58,110,0.12);
+    z-index: 150;
+  }
+  .char-float-btn {
+    width: 40px; height: 36px;
+    font-size: 12px;
+    border-radius: 18px;
+  }
+  /* push back-to-top up */
+  .btn-top { bottom: 80px !important; }
+}
+@media (max-width: 480px) {
+  .char-float {
+    gap: 10px;
+    padding: 6px 12px;
+  }
+  .char-float-btn {
+    width: 34px; height: 34px;
+    font-size: 15px;
+  }
+  .btn-top { bottom: 72px !important; }
+}
 </style>
 </head>
 <body>
@@ -1984,6 +2056,12 @@ body {
     完整项目及使用方法见 <a href="https://github.com/99cz99/pocket-wechat-bot" style="color:#e8a0bf;">pocket-wechat-bot</a>
   </p>
 </footer>
+
+<!-- Character floating sidebar -->
+<div class="char-float">
+  <div class="char-float-btn nene-btn" title="绫地宁宁 · 当前角色">宁宁</div>
+  <a href="meguru-skill-intro.html" class="char-float-btn meguru-btn" title="因幡巡">巡</a>
+</div>
 
 <!-- Back to top -->
 <button class="btn-top" id="btnTop" aria-label="返回顶部" title="返回顶部">↑</button>
