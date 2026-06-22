@@ -36,15 +36,16 @@
 
 ### 一键部署 🚀
 
-先把仓库拉到 PC：
-```bash
-git clone https://github.com/99cz99/pocket-wechat-bot.git
-```
-然后 USB 连接手机，打开 `pocket-wechat-bot\scripts\` 文件夹，双击 `deploy.bat`，跟着提示走。
+1. **克隆仓库到 PC**：
+   ```bash
+   git clone https://github.com/99cz99/pocket-wechat-bot.git
+   ```
+2. **手机开启 USB 调试**：设置 → 关于手机 → 连点「版本号」打开开发者选项 → 返回 → 开发者选项 → 开启 **USB 调试**
+3. **手机用 USB 连接 PC**，在 PC 上打开 `pocket-wechat-bot\scripts\` 文件夹，双击 `deploy.bat`，按照指引操作
 
 脚本自动完成：环境检查 → 文件推送 → 依赖安装 → 配置生成 → 扫码 → 启动。支持中断续跑（幂等）。
 
-**日常更新**：改完代码后，双击 `scripts\update.bat`，30 秒推文件+重启 bot（版本未变自动跳过）。
+**日常更新**：改完代码后，PC 上双击 `scripts\update.bat`，30 秒推文件+重启 bot（版本未变自动跳过）。
 
 > 没有 PC？手机 Termux 里直接跑也行：`git clone https://github.com/99cz99/pocket-wechat-bot.git && cd pocket-wechat-bot && bash scripts/setup-phone.sh`
 >
